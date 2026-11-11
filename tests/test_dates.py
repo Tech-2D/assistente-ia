@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from datetime import date
 
 import pytest
@@ -49,3 +52,19 @@ def test_calendar_context_contains_adjacent_days_and_next_week():
     assert result["tomorrow"] == "2024-02-29"
     assert result["next_week_start"] == "2024-03-04"
     assert result["next_week_end"] == "2024-03-10"
+
+
+def test_sao_paulo_timezone_loads_without_system_timezone_database():
+    env = {**os.environ, "PYTHONTZPATH": ""}
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from zoneinfo import ZoneInfo; print(ZoneInfo('America/Sao_Paulo'))",
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "America/Sao_Paulo"

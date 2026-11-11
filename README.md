@@ -15,9 +15,12 @@ Requer Python 3.12. No PowerShell, na pasta deste projeto:
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.lock
 python -m pip install -e ".[test]"
 Copy-Item .env.example .env
 ```
+
+O arquivo `requirements.lock` registra as versões testadas no Windows com Python 3.12, incluindo dependências de teste.
 
 Preencha o `.env` com a chave Groq, os dados do PostgreSQL e a configuração Web do Firebase. Chaves Groq adicionais são opcionais em `GROQ_API_KEYS`, separadas por vírgula. Providencie o certificado CA do banco no caminho indicado por `DB_SSLROOTCERT`. Esses arquivos e credenciais não vêm no Git e devem ser obtidos por um meio seguro.
 

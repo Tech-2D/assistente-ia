@@ -1,4 +1,4 @@
-aiosqlite==0.22.1
+# Validated on Windows with Python 3.12; includes test dependencies.
 annotated-doc==0.0.6
 annotated-types==0.8.0
 anyio==4.16.0
@@ -8,6 +8,7 @@ certifi==2026.10.23
 cffi==2.1.1
 charset-normalizer==3.5.2
 click==8.5.1
+colorama==0.4.6
 cryptography==50.0.2
 distro==1.9.0
 fastapi==0.162.4
@@ -33,8 +34,9 @@ httpx==0.28.1
 httpx2==2.16.0
 hyperframe==6.1.0
 idna==3.20
+iniconfig==2.3.1
 jsonpatch==1.46
-jsonpointer==3.11
+jsonpointer==3.12
 langchain==1.4.10
 langchain-core==1.7.7
 langchain-groq==1.1.3
@@ -49,25 +51,26 @@ opentelemetry-api==1.45.2
 orjson==3.13.0
 ormsgpack==1.13.1
 packaging==26.3
+pluggy==1.7.0
 proto-plus==1.29.0
 protobuf==7.36.2
-psycopg==3.3.8
-psycopg-binary==3.3.8
-psycopg-pool==3.3.3
 pyasn1==0.6.5
 pyasn1_modules==0.4.2
 pycparser==3.12
 pydantic==2.14.3
 pydantic-settings==2.16.2
 pydantic_core==2.50.4
+Pygments==2.21.0
 PyJWT==2.15.1
+pytest==8.4.2
+pytest-asyncio==1.4.1.post1
 python-dotenv==1.2.4
 PyYAML==6.0.3
 requests==2.34.2
 requests-toolbelt==1.0.0
+ruff==0.17.4
 sniffio==1.3.1
 starlette==1.10.0
-# Editable install with no version control (tech2d-ai-assistant==0.1.0)
 tenacity==9.2.1
 truststore==0.10.5
 typing-inspection==0.4.5

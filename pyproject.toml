@@ -20,6 +20,7 @@ dependencies = [
   "groq>=0.37,<1",
   "langgraph>=1.0,<2",
   "firebase-admin>=6.6,<8",
+  "tzdata>=2025.2",
 ]
 
 [project.optional-dependencies]
