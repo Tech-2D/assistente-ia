@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.activity_tool import query_activities
 from app.config import configured_groq_keys, get_settings
-from app.dates import today_local
+from app.dates import calendar_context, today_local
 from app.groq_classifier import GroqFallbackClassifier
 from app.types import ActivityFilters, ActivityType
 
@@ -150,6 +150,7 @@ def _system_prompt(today: str, previous_query: dict | None) -> str:
         }
     context = {
         "today_in_America_Sao_Paulo": today,
+        "calendar_in_America_Sao_Paulo": calendar_context(date.fromisoformat(today)),
         "previous_validated_query": safe_previous_query,
         "output_contract": "Return only the RequestIntent fields. Never write a user-facing answer.",
     }

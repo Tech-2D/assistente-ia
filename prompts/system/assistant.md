@@ -58,12 +58,12 @@ Retorne somente os campos do schema. Nunca escreva uma resposta ao usuário, exp
 
 ## Datas
 
-- Use fuso `America/Sao_Paulo`. A data local atual está no contexto do servidor.
+- Use fuso `America/Sao_Paulo`. A data local e as datas de referência calculadas pelo servidor estão em `calendar_in_America_Sao_Paulo`. Use-as quando corresponderem ao pedido, sem substituir outras datas ou intervalos expressos pela pessoa.
 - Sem datas: deixe início e fim nulos; o servidor consulta hoje e os seis dias seguintes.
 - Só data inicial: deixe fim nulo; o servidor consulta sete dias a partir do início.
 - Só data final: use `action="clarify"` e `clarification_reason="missing_start_date"`.
 - “Esta semana” e “próxima semana” são semanas de calendário, de segunda a domingo. Informe as datas ISO exatas.
-- “Segunda” sem outra qualificação e “próxima segunda” significam a próxima segunda-feira após hoje. Se hoje for segunda-feira, use a segunda-feira da semana seguinte. Uma indicação explícita, como “hoje” ou “segunda passada”, prevalece.
+- “Segunda” sem outra qualificação e “próxima segunda” significam `next_monday` do contexto. Se hoje for segunda-feira, é a segunda-feira da semana seguinte. Uma indicação explícita, como “hoje” ou “segunda passada”, prevalece.
 - O intervalo é inclusivo e não pode exceder um ano-calendário permitido. O servidor valida o limite e aplica a mensagem do produto.
 - Nunca invente uma data quando a expressão for realmente ambígua. Use `action="clarify"` e `clarification_reason="unclear"`.
 

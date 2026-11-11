@@ -8,6 +8,21 @@ def today_local() -> date:
     return datetime.now(TZ).date()
 
 
+def calendar_context(today: date) -> dict[str, str]:
+    """Calendar anchors are calculated in code and interpreted in the user's context."""
+    monday = today - timedelta(days=today.weekday())
+    return {
+        "today": today.isoformat(),
+        "yesterday": (today - timedelta(days=1)).isoformat(),
+        "tomorrow": (today + timedelta(days=1)).isoformat(),
+        "current_week_start": monday.isoformat(),
+        "current_week_end": (monday + timedelta(days=6)).isoformat(),
+        "next_week_start": (monday + timedelta(days=7)).isoformat(),
+        "next_week_end": (monday + timedelta(days=13)).isoformat(),
+        "next_monday": (monday + timedelta(days=7)).isoformat(),
+    }
+
+
 def anniversary(value: date) -> date:
     try:
         return value.replace(year=value.year + 1)
