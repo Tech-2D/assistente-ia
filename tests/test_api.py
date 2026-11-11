@@ -233,6 +233,43 @@ def test_logout_deletes_only_the_callers_temporary_session(client):
     assert session_id not in main.sessions
 
 
+@pytest.mark.asyncio
+async def test_queued_message_rejects_session_closed_while_waiting(monkeypatch):
+    import asyncio
+
+    session_id = str(uuid.uuid4())
+    state = {"uid": "test-user", "updated": main.time.time(), "lock": asyncio.Lock()}
+    main.sessions[session_id] = state
+    monkeypatch.setattr(main, "firebase_user", lambda token: "test-user")
+    entered = asyncio.Event()
+
+    async def get_session(*args):
+        entered.set()
+        return state
+
+    async def unexpected_process(*args):
+        raise AssertionError("a closed session must not process a queued message")
+
+    monkeypatch.setattr(main, "_get_or_create_session", get_session)
+    monkeypatch.setattr(main, "_process_chat", unexpected_process)
+    await state["lock"].acquire()
+    task = asyncio.create_task(
+        main.chat(
+            main.ChatRequest(message="Quais provas?", session_id=session_id),
+            authorization="Bearer test-token",
+        )
+    )
+    try:
+        await entered.wait()
+        async with main.session_registry_lock:
+            main.sessions.pop(session_id)
+    finally:
+        state["lock"].release()
+    with pytest.raises(main.HTTPException) as exc:
+        await task
+    assert exc.value.status_code == 404
+
+
 def test_assistant_preserves_request_while_waiting_for_subject_answer(client, monkeypatch):
     monkeypatch.setattr(main.settings, "groq_api_key", "configured-for-test")
 

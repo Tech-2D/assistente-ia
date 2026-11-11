@@ -372,4 +372,9 @@ async def chat(
     session_id = _session_id_or_new(body.session_id)
     state = await _get_or_create_session(session_id, uid, body.preferred_class)
     async with state["lock"]:
+        # A close may have removed or replaced this session while the request
+        # waited for its lock. Never process messages against an orphaned state.
+        async with session_registry_lock:
+            if sessions.get(session_id) is not state:
+                raise HTTPException(404, "Sessão não encontrada.")
         return await _process_chat(body, uid, message, session_id, state)
