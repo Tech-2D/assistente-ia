@@ -19,7 +19,7 @@ python -m pip install -e ".[test]"
 Copy-Item .env.example .env
 ```
 
-Preencha o `.env` com a chave Groq, os dados do PostgreSQL e a configuração Web do Firebase. Providencie o certificado CA do banco no caminho indicado por `DB_SSLROOTCERT`. Esses arquivos e credenciais não vêm no Git e devem ser obtidos por um meio seguro.
+Preencha o `.env` com a chave Groq, os dados do PostgreSQL e a configuração Web do Firebase. Chaves Groq adicionais são opcionais em `GROQ_API_KEYS`, separadas por vírgula. Providencie o certificado CA do banco no caminho indicado por `DB_SSLROOTCERT`. Esses arquivos e credenciais não vêm no Git e devem ser obtidos por um meio seguro.
 
 ```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000

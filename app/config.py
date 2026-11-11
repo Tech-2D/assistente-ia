@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     )
     app_env: str = "development"
     groq_api_key: str = ""
+    groq_api_keys: str = ""
+    groq_max_keys_per_request: int = Field(default=3, ge=1, le=10)
     groq_model: str = "openai/gpt-oss-20b"
     llm_temperature: float = Field(default=0.7, ge=0, le=2)
     llm_top_p: float = Field(default=0.95, ge=0, le=1)
@@ -40,3 +42,9 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def configured_groq_keys(settings: Settings) -> tuple[str, ...]:
+    """Primary key followed by comma-separated extra keys, without duplicates."""
+    candidates = [settings.groq_api_key, *settings.groq_api_keys.split(",")]
+    return tuple(dict.fromkeys(value.strip() for value in candidates if value.strip()))

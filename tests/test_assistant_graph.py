@@ -56,7 +56,8 @@ def test_pending_clarification_context_matches_the_server_question():
     assert "matéria" in _pending_question("ambiguous_subject").casefold()
 
 
-def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch):
+@pytest.mark.asyncio
+async def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch):
     from types import SimpleNamespace
 
     from app import assistant
@@ -66,6 +67,8 @@ def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch
         llm_temperature=0.7,
         llm_top_p=0.95,
         groq_api_key="test-key",
+        groq_api_keys="",
+        groq_max_keys_per_request=3,
         llm_timeout_seconds=30,
     )
     captured = {}
@@ -79,7 +82,8 @@ def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch
 
     monkeypatch.setattr(assistant, "get_settings", lambda: settings)
     monkeypatch.setattr(assistant, "ChatGroq", FakeGroq)
-    build_assistant_graph(default_class=None, classes=[])
+    graph = build_assistant_graph(default_class=None, classes=[])
+    await graph.ainvoke({"message": "Teste"})
 
     assert captured == {
         "model": "openai/gpt-oss-20b",
@@ -87,7 +91,7 @@ def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch
         "model_kwargs": {"top_p": 0.95},
         "api_key": "test-key",
         "request_timeout": 30,
-        "max_retries": 1,
+        "max_retries": 0,
     }
 
 

@@ -15,8 +15,9 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.activity_tool import query_activities
-from app.config import get_settings
+from app.config import configured_groq_keys, get_settings
 from app.dates import today_local
+from app.groq_classifier import GroqFallbackClassifier
 from app.types import ActivityFilters, ActivityType
 
 logger = logging.getLogger(__name__)
@@ -377,15 +378,21 @@ def build_assistant_graph(
     """
     settings = get_settings()
     if classifier is None:
-        llm = ChatGroq(
-            model=settings.groq_model,
-            temperature=settings.llm_temperature,
-            model_kwargs={"top_p": settings.llm_top_p},
-            api_key=settings.groq_api_key,
-            request_timeout=settings.llm_timeout_seconds,
-            max_retries=1,
+
+        def make_classifier(key: str):
+            llm = ChatGroq(
+                model=settings.groq_model,
+                temperature=settings.llm_temperature,
+                model_kwargs={"top_p": settings.llm_top_p},
+                api_key=key,
+                request_timeout=settings.llm_timeout_seconds,
+                max_retries=0,
+            )
+            return llm.with_structured_output(RequestIntent, method="json_schema", strict=True)
+
+        classifier = GroqFallbackClassifier(
+            configured_groq_keys(settings), make_classifier, settings.groq_max_keys_per_request
         )
-        classifier = llm.with_structured_output(RequestIntent, method="json_schema", strict=True)
 
     @tool("consultar_atividades", args_schema=LookupArgs)
     async def consultar_atividades(

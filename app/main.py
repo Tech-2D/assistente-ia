@@ -21,7 +21,7 @@ from app.assistant import (
     requests_multiple_classes,
 )
 from app.classes import list_classes
-from app.config import get_settings
+from app.config import configured_groq_keys, get_settings
 from app.limits import RateLimiter, RateLimitExceeded
 from app.security import blocked_input, blocked_terms, firebase_user
 
@@ -203,8 +203,8 @@ async def _process_chat(
         logger.error("Class catalog unavailable (%s)", type(exc).__name__)
         return _response(session_id, ERROR_REPLY, remaining)
 
-    if not settings.groq_api_key:
-        raise HTTPException(503, "O provedor de IA ainda não está configurado.")
+    if not configured_groq_keys(settings):
+        raise HTTPException(503, ERROR_REPLY)
 
     try:
         preferred_class = state.get("preferred_class")
@@ -292,7 +292,7 @@ def health():
 async def ready():
     """Readiness check without returning credentials or database contents."""
     missing = []
-    if not settings.groq_api_key:
+    if not configured_groq_keys(settings):
         missing.append("groq")
     if not settings.vite_firebase_api_key or not settings.vite_firebase_app_id:
         missing.append("firebase_web")

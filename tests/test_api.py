@@ -25,6 +25,7 @@ def test_chat_requires_firebase_bearer_token(client):
 
 def test_readiness_is_unavailable_until_groq_is_configured(client, monkeypatch):
     monkeypatch.setattr(main.settings, "groq_api_key", "")
+    monkeypatch.setattr(main.settings, "groq_api_keys", "")
     monkeypatch.setattr(main.settings, "vite_firebase_api_key", "public-test-key")
     monkeypatch.setattr(main.settings, "vite_firebase_app_id", "test-app-id")
     monkeypatch.setattr(
@@ -39,6 +40,26 @@ def test_readiness_is_unavailable_until_groq_is_configured(client, monkeypatch):
     assert response.json() == {"ready": False, "missing": ["groq"]}
 
 
+def test_readiness_accepts_an_additional_groq_key(client, monkeypatch):
+    monkeypatch.setattr(main.settings, "groq_api_key", "")
+    monkeypatch.setattr(main.settings, "groq_api_keys", "configured-for-test")
+    monkeypatch.setattr(main.settings, "vite_firebase_api_key", "public-test-key")
+    monkeypatch.setattr(main.settings, "vite_firebase_app_id", "test-app-id")
+    monkeypatch.setattr(
+        main.settings, "vite_firebase_project_id", main.settings.firebase_project_id
+    )
+    monkeypatch.setattr(main.settings, "database_url", "postgresql://configured")
+    monkeypatch.setattr(main.settings, "db_sslrootcert", "configured")
+
+    async def classes():
+        return ["Turma A"]
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    response = client.get("/ready")
+    assert response.status_code == 200
+    assert response.json() == {"ready": True, "missing": []}
+
+
 def test_out_of_scope_request_is_refused_without_llm_or_database(client, monkeypatch):
     def unexpected_call(*args, **kwargs):
         raise AssertionError("out-of-scope request must not call the database")
@@ -51,6 +72,23 @@ def test_out_of_scope_request_is_refused_without_llm_or_database(client, monkeyp
     )
     assert response.status_code == 200
     assert response.json()["answer"] == main.REFUSAL
+
+
+def test_missing_groq_key_suggests_manual_agenda(client, monkeypatch):
+    monkeypatch.setattr(main.settings, "groq_api_key", "")
+    monkeypatch.setattr(main.settings, "groq_api_keys", "")
+
+    async def classes():
+        return ["Turma A"]
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    response = client.post(
+        "/api/chat",
+        headers={"Authorization": "Bearer test-token"},
+        json={"message": "Quais provas temos amanhã?", "preferred_class": "Turma A"},
+    )
+    assert response.status_code == 503
+    assert "confira a Agenda manualmente" in response.json()["detail"]
 
 
 def test_multiple_classes_are_rejected_before_model_call(client, monkeypatch):
