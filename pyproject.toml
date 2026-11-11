@@ -20,11 +20,12 @@ dependencies = [
   "groq>=0.37,<1",
   "langgraph>=1.0,<2",
   "firebase-admin>=6.6,<8",
+  "google-auth>=2.14,<3",
   "tzdata>=2025.2",
 ]
 
 [project.optional-dependencies]
-test = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<2", "ruff>=0.11,<1"]
+test = ["pytest>=8.3,<9", "pytest-asyncio>=0.25,<2", "ruff>=0.11,<1", "PyJWT[crypto]>=2,<3"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
