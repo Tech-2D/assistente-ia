@@ -178,7 +178,13 @@ async def _process_chat(
     try:
         remaining = await asyncio.to_thread(limiter.consume, uid)
     except RateLimitExceeded:
-        raise HTTPException(429, "Você atingiu o limite diário de mensagens.") from None
+        raise HTTPException(
+            429,
+            "Você atingiu o limite diário de mensagens. Por enquanto, confira a Agenda manualmente.",
+        ) from None
+    except Exception as exc:  # noqa: BLE001 - fail closed if the local limit is unavailable.
+        logger.error("Message counter unavailable (%s)", type(exc).__name__)
+        raise HTTPException(503, ERROR_REPLY) from None
 
     if blocked_input(message, blocked_terms(settings.blocked_terms)):
         state["last_query"] = None

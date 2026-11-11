@@ -23,6 +23,41 @@ def test_chat_requires_firebase_bearer_token(client):
     assert response.status_code == 401
 
 
+def test_counter_failure_refuses_request_without_querying_agenda(client, monkeypatch):
+    class UnavailableLimiter:
+        def consume(self, uid):
+            raise RuntimeError("private diagnostic")
+
+    def unexpected_query(*args, **kwargs):
+        raise AssertionError("the quota must be checked before querying")
+
+    monkeypatch.setattr(main, "limiter", UnavailableLimiter())
+    monkeypatch.setattr(main, "list_classes", unexpected_query)
+    response = client.post(
+        "/api/chat",
+        headers={"Authorization": "Bearer test-token"},
+        json={"message": "Quais provas temos amanhã?"},
+    )
+    assert response.status_code == 503
+    assert "confira a Agenda manualmente" in response.json()["detail"]
+    assert "private diagnostic" not in response.text
+
+
+def test_daily_limit_suggests_manual_agenda(client, monkeypatch):
+    class ExhaustedLimiter:
+        def consume(self, uid):
+            raise main.RateLimitExceeded
+
+    monkeypatch.setattr(main, "limiter", ExhaustedLimiter())
+    response = client.post(
+        "/api/chat",
+        headers={"Authorization": "Bearer test-token"},
+        json={"message": "Quais provas temos amanhã?"},
+    )
+    assert response.status_code == 429
+    assert "confira a Agenda manualmente" in response.json()["detail"]
+
+
 @pytest.mark.asyncio
 async def test_slow_counter_does_not_block_event_loop(monkeypatch):
     import asyncio
