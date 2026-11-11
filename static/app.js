@@ -20,6 +20,32 @@ let auth = null;
 let user = null;
 let sessionId = null;
 let busy = false;
+let sessionToken = null;
+let conversationVersion = 0;
+let activeRequest = null;
+
+function discardConversation() {
+  const oldSession = sessionId;
+  const oldToken = sessionToken;
+  conversationVersion += 1;
+  activeRequest?.abort();
+  activeRequest = null;
+  sessionId = null;
+  sessionToken = null;
+  busy = false;
+  $("#send").disabled = false;
+  messages.replaceChildren();
+  bubble("Nova conversa iniciada. O que você gostaria de consultar?", "assistant");
+
+  if (oldSession && oldToken) {
+    // Browsers may interrupt page teardown requests; server-side expiry remains the fallback.
+    void fetch(`/api/session/${encodeURIComponent(oldSession)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${oldToken}` },
+      keepalive: true,
+    }).catch(() => {});
+  }
+}
 
 const agendaToProfessorClass = {
   "2° TECH D": "2º Tec D",
@@ -171,6 +197,7 @@ async function loadFirebaseConfig() {
     auth = getAuth(initializeApp(firebase));
     await setPersistence(auth, browserSessionPersistence);
     onAuthStateChanged(auth, async (nextUser) => {
+      if (user && user.uid !== nextUser?.uid) discardConversation();
       user = nextUser;
       login.classList.toggle("hidden", !!user);
       panel.classList.toggle("hidden", !user);
@@ -206,22 +233,31 @@ $("#chatForm").addEventListener("submit", async (event) => {
   bubble(message, "user");
   busy = true;
   $("#send").disabled = true;
+  const version = conversationVersion;
+  const request = new AbortController();
+  activeRequest = request;
+  const requestSessionId = sessionId || crypto.randomUUID();
+  sessionId = requestSessionId;
   const loading = bubble("Consultando…", "assistant");
   try {
     const token = await user.getIdToken();
+    if (version !== conversationVersion) return;
+    sessionToken = token;
     const response = await fetch("/api/chat", {
       method: "POST",
+      signal: request.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         message,
-        session_id: sessionId,
+        session_id: requestSessionId,
         preferred_class: classSelect.value || null,
       }),
     });
     const data = await response.json().catch(() => ({}));
+    if (version !== conversationVersion) return;
     loading.remove();
     if (!response.ok) {
       showAnswer(data.detail || SEND_ERROR);
@@ -234,38 +270,26 @@ $("#chatForm").addEventListener("submit", async (event) => {
       $("#quota").textContent = `${data.remaining_messages} mensagens restantes hoje`;
     }
   } catch {
+    if (version !== conversationVersion) return;
     loading.remove();
     showAnswer(SEND_ERROR);
   } finally {
-    busy = false;
-    $("#send").disabled = false;
-    input.focus();
+    if (version === conversationVersion) {
+      activeRequest = null;
+      busy = false;
+      $("#send").disabled = false;
+      input.focus();
+    }
   }
 });
 
-$("#newChat").addEventListener("click", async () => {
-  if (sessionId && user) {
-    const token = await user.getIdToken();
-    await fetch(`/api/session/${encodeURIComponent(sessionId)}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {});
-  }
-  sessionId = null;
-  messages.replaceChildren();
-  bubble("Nova conversa iniciada. O que você gostaria de consultar?", "assistant");
-});
+$("#newChat").addEventListener("click", discardConversation);
 
 $("#logout").addEventListener("click", async () => {
-  if (sessionId && user) {
-    const token = await user.getIdToken();
-    await fetch(`/api/session/${encodeURIComponent(sessionId)}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch(() => {});
-  }
-  sessionId = null;
+  discardConversation();
   if (auth) await signOut(auth);
 });
+
+window.addEventListener("pagehide", discardConversation);
 
 void loadFirebaseConfig();
