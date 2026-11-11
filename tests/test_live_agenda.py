@@ -81,6 +81,7 @@ async def test_readonly_filtered_query_and_tool_match_live_records():
                 pytest.fail(
                     "Filtro exclusivo de gerais não corresponde à comparação local.", pytrace=False
                 )
+            expected_general = [str(row[0]) for row in only_general]
             recurrence_ids = sorted({str(row[7]) for row in rows if row[7] and row[6] == class_id})
             occurrence_rows = await conn.fetch(
                 OCCURRENCE_QUERY,
@@ -111,5 +112,14 @@ async def test_readonly_filtered_query_and_tool_match_live_records():
             pytest.fail(
                 "Ferramenta e consulta SQL apresentaram resultados diferentes.", pytrace=False
             )
+        general_result = await query_activities(
+            ActivityFilters(start_date=start, finish_date=end, general_only=True),
+            class_id,
+            [class_id],
+        )
+        if general_result.get("error") or general_result.get("clarification_code"):
+            pytest.fail("A ferramenta de atividades gerais falhou.", pytrace=False)
+        if [item["id"] for item in general_result["items"]] != expected_general:
+            pytest.fail("Ferramenta de gerais e consulta SQL divergiram.", pytrace=False)
     except Exception as exc:  # noqa: BLE001 - avoid exposing database values or credentials.
         pytest.fail(f"Integração indisponível: {type(exc).__name__}.", pytrace=False)

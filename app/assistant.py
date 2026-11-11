@@ -341,7 +341,7 @@ def _format_result(result: dict) -> tuple[str, list[dict]]:
     start = result.get("start_date", "")
     finish = result.get("finish_date", "")
     class_name = result.get("class_id") or "a turma selecionada"
-    scope = "nos eventos gerais" if result.get("general_only") else f"para {class_name}"
+    scope = "nas atividades gerais" if result.get("general_only") else f"para {class_name}"
     subject = result.get("subject")
     if not items:
         answer = (

@@ -91,7 +91,7 @@ async def test_general_only_intent_reaches_tool_and_formats_scope(monkeypatch):
         ),
     )
     result = await graph.ainvoke({"message": "Mostre só eventos gerais"})
-    assert "eventos gerais" in result["answer"]
+    assert "atividades gerais" in result["answer"]
     assert result["query_context"]["general_only"] is True
 
 
