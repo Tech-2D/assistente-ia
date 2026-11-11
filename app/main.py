@@ -226,6 +226,11 @@ async def _process_chat(
             }
         )
         state["updated"] = time.time()
+        tool_result = result.get("result")
+        if isinstance(tool_result, dict) and tool_result.get("error"):
+            # A failed lookup is not a validated conversation state. Preserve any
+            # previous filters and unanswered clarification so the user can retry.
+            return _response(session_id, result.get("answer") or ERROR_REPLY, remaining)
         intent = result.get("intent")
         clarification_reason = None
         if intent and intent.action == "clarify":

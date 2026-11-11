@@ -303,6 +303,49 @@ def test_assistant_preserves_request_while_waiting_for_subject_answer(client, mo
     assert state["pending_reason"] is None
 
 
+def test_tool_failure_preserves_prior_query_and_pending_clarification(client, monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(main.settings, "groq_api_key", "configured-for-test")
+
+    async def classes():
+        return ["2° TECH D"]
+
+    class FakeGraph:
+        async def ainvoke(self, _inputs):
+            return {
+                "intent": RequestIntent(action="consult"),
+                "result": {"error": "agenda_unavailable"},
+                "query_context": {"subject": None, "types": []},
+                "answer": main.ERROR_REPLY,
+            }
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    monkeypatch.setattr(main, "build_assistant_graph", lambda **kwargs: FakeGraph())
+    session_id = str(uuid.uuid4())
+    last_query = {"subject": "Matemática", "types": ["prova"]}
+    state = {
+        "uid": "test-user",
+        "updated": main.time.time(),
+        "preferred_class": "2° TECH D",
+        "last_query": last_query,
+        "pending_message": "Qual desenvolvimento?",
+        "pending_reason": "ambiguous_subject",
+        "lock": asyncio.Lock(),
+    }
+    main.sessions[session_id] = state
+    response = client.post(
+        "/api/chat",
+        headers={"Authorization": "Bearer test-token"},
+        json={"message": "Mobile", "session_id": session_id},
+    )
+    assert response.status_code == 200
+    assert "confira a Agenda manualmente" in response.json()["answer"]
+    assert state["last_query"] == last_query
+    assert state["pending_message"] == "Qual desenvolvimento?"
+    assert state["pending_reason"] == "ambiguous_subject"
+
+
 def test_refusal_clears_stale_conversation_context(client, monkeypatch):
     import asyncio
 

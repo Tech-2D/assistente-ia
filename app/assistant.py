@@ -488,8 +488,10 @@ def build_assistant_graph(
         except (json.JSONDecodeError, TypeError):
             result = {"error": "agenda_unavailable"}
 
-        canonical_query = _canonical_query_context(result, query_context, classes)
         answer, cards = _format_result(result)
+        if result.get("error"):
+            return {"result": result, "answer": answer, "cards": cards}
+        canonical_query = _canonical_query_context(result, query_context, classes)
         return {
             "result": result,
             "query_context": canonical_query,

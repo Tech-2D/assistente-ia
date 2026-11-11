@@ -257,6 +257,22 @@ async def test_database_activity_text_is_never_sent_back_to_classifier(monkeypat
 
 
 @pytest.mark.asyncio
+async def test_tool_error_is_not_saved_as_validated_query(monkeypatch):
+    async def failed_query(filters, default_class, allowed_classes):
+        return {"error": True, "error_code": "agenda_unavailable"}
+
+    monkeypatch.setattr("app.assistant.query_activities", failed_query)
+    classifier = FakeClassifier(RequestIntent(action="consult", subject="Matemática"))
+    graph = build_assistant_graph(
+        default_class="2° TECH D", classes=["2° TECH D"], classifier=classifier
+    )
+    result = await graph.ainvoke({"message": "Tem prova de matemática?"})
+    assert result["result"]["error"]
+    assert "query_context" not in result
+    assert "confira a Agenda manualmente" in result["answer"]
+
+
+@pytest.mark.asyncio
 async def test_reply_to_missing_class_preserves_original_request(monkeypatch):
     async def fake_query(filters, default_class, allowed_classes):
         assert filters.class_id is None
