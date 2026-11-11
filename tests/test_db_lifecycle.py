@@ -1,4 +1,6 @@
 import asyncio
+import ssl
+from types import SimpleNamespace
 
 import pytest
 
@@ -31,6 +33,26 @@ def configure_connection(monkeypatch, conn):
 
     monkeypatch.setattr(db, "connection_options", dict)
     monkeypatch.setattr(db.asyncpg, "connect", connect)
+
+
+def test_connection_options_identify_service_and_enforce_readonly_tls(monkeypatch, tmp_path):
+    cert = tmp_path / "ca.pem"
+    cert.touch()
+    settings = SimpleNamespace(
+        database_url="postgresql://test-user:test-password@example.test:1234/test-db",
+        db_sslrootcert=str(cert),
+        database_statement_timeout_ms=15000,
+    )
+    context = SimpleNamespace(check_hostname=False, verify_mode=None)
+    monkeypatch.setattr(db, "get_settings", lambda: settings)
+    monkeypatch.setattr(db.ssl, "create_default_context", lambda cafile: context)
+
+    options = db.connection_options()
+    assert options["server_settings"]["application_name"] == "tech2d-ai-assistant"
+    assert options["server_settings"]["default_transaction_read_only"] == "on"
+    assert options["server_settings"]["statement_timeout"] == "15000"
+    assert context.check_hostname is True
+    assert context.verify_mode == ssl.CERT_REQUIRED
 
 
 @pytest.mark.asyncio

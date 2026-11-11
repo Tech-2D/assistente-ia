@@ -39,6 +39,7 @@ def connection_options() -> dict:
         "timeout": 8,
         "command_timeout": settings.database_statement_timeout_ms / 1000,
         "server_settings": {
+            "application_name": "tech2d-ai-assistant",
             "default_transaction_read_only": "on",
             "statement_timeout": str(settings.database_statement_timeout_ms),
         },
