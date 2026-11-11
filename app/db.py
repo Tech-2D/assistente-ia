@@ -50,8 +50,9 @@ def connection_options() -> dict:
 async def read_connection():
     conn = await asyncpg.connect(**connection_options())
     try:
-        if await conn.fetchval("SHOW transaction_read_only") != "on":
-            raise RuntimeError("A sessão PostgreSQL não está somente leitura.")
-        yield conn
+        async with conn.transaction(isolation="repeatable_read", readonly=True):
+            if await conn.fetchval("SHOW transaction_read_only") != "on":
+                raise RuntimeError("A sessão PostgreSQL não está somente leitura.")
+            yield conn
     finally:
         await conn.close()

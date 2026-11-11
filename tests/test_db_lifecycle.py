@@ -1,5 +1,6 @@
 import asyncio
 import ssl
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
 import pytest
@@ -13,6 +14,16 @@ class FakeConnection:
         self.read_only = read_only
         self.fail_query = fail_query
         self.closed = False
+        self.transaction_exited = False
+
+    @asynccontextmanager
+    async def transaction(self, *, isolation, readonly):
+        assert isolation == "repeatable_read"
+        assert readonly is True
+        try:
+            yield
+        finally:
+            self.transaction_exited = True
 
     async def fetchval(self, query):
         assert query == "SHOW transaction_read_only"
@@ -24,6 +35,7 @@ class FakeConnection:
         return []
 
     async def close(self):
+        assert self.transaction_exited
         self.closed = True
 
 

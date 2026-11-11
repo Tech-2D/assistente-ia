@@ -34,6 +34,8 @@ async def test_readonly_filtered_query_and_tool_match_live_records():
             mode = await conn.fetchval("SHOW transaction_read_only")
             if mode != "on":
                 pytest.fail("Conexão não está em modo somente leitura.", pytrace=False)
+            if await conn.fetchval("SHOW transaction_isolation") != "repeatable read":
+                pytest.fail("A consulta não usa uma visão consistente.", pytrace=False)
             rows = await conn.fetch(
                 QUERY, class_id, True, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, []
             )
