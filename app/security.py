@@ -1,4 +1,5 @@
 import re
+import threading
 import unicodedata
 
 from fastapi import HTTPException
@@ -6,16 +7,19 @@ from firebase_admin import auth, get_app, initialize_app
 
 from app.config import get_settings
 
+_firebase_init_lock = threading.Lock()
+
 
 def firebase_user(token: str) -> str:
     settings = get_settings()
     if not settings.firebase_project_id:
         raise HTTPException(503, "Autenticação indisponível.")
     try:
-        try:
-            app = get_app()
-        except ValueError:
-            app = initialize_app(options={"projectId": settings.firebase_project_id})
+        with _firebase_init_lock:
+            try:
+                app = get_app()
+            except ValueError:
+                app = initialize_app(options={"projectId": settings.firebase_project_id})
         claims = auth.verify_id_token(token, app=app, check_revoked=False)
         uid = claims.get("uid") or claims.get("sub")
         if not isinstance(uid, str) or not uid:

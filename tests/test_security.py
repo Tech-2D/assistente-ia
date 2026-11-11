@@ -64,3 +64,34 @@ def test_firebase_user_fails_when_project_is_not_configured(monkeypatch):
         security.firebase_user("any-token")
 
     assert error.value.status_code == 503
+
+
+def test_firebase_initialization_is_safe_under_concurrency(monkeypatch):
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    monkeypatch.setattr(
+        security,
+        "get_settings",
+        lambda: SimpleNamespace(firebase_project_id="test-project"),
+    )
+    created = []
+    shared_app = object()
+
+    def fake_get_app():
+        if not created:
+            raise ValueError("not initialized")
+        return shared_app
+
+    def fake_initialize(*, options):
+        time.sleep(0.05)
+        created.append(options)
+        return shared_app
+
+    monkeypatch.setattr(security, "get_app", fake_get_app)
+    monkeypatch.setattr(security, "initialize_app", fake_initialize)
+    monkeypatch.setattr(security.auth, "verify_id_token", lambda *args, **kwargs: {"uid": "user"})
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(security.firebase_user, ["token"] * 8))
+    assert results == ["user"] * 8
+    assert len(created) == 1

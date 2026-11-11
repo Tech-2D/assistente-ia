@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -21,7 +22,7 @@ class RateLimiter:
         self.limit = max(0, limit)
         self.enabled = enabled
         Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with self._db() as db:
+        with closing(self._db()) as db:
             db.execute(
                 "CREATE TABLE IF NOT EXISTS daily_usage ("
                 "uid_hash TEXT NOT NULL, day TEXT NOT NULL, used INTEGER NOT NULL, "
@@ -30,8 +31,12 @@ class RateLimiter:
 
     def _db(self):
         db = sqlite3.connect(self.path, timeout=10, isolation_level=None)
-        db.execute("PRAGMA journal_mode=WAL")
-        db.execute("PRAGMA synchronous=NORMAL")
+        try:
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA synchronous=NORMAL")
+        except BaseException:
+            db.close()
+            raise
         return db
 
     def consume(self, uid: str) -> int | None:
@@ -42,7 +47,7 @@ class RateLimiter:
         day = today.isoformat()
         retention_floor = (today - timedelta(days=7)).isoformat()
 
-        with self._db() as db:
+        with closing(self._db()) as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute("DELETE FROM daily_usage WHERE day < ?", (retention_floor,))
             row = db.execute(

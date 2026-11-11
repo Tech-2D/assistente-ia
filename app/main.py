@@ -175,7 +175,7 @@ async def _process_chat(
     state["updated"] = time.time()
 
     try:
-        remaining = limiter.consume(uid)
+        remaining = await asyncio.to_thread(limiter.consume, uid)
     except RateLimitExceeded:
         raise HTTPException(429, "Você atingiu o limite diário de mensagens.") from None
 
@@ -319,7 +319,7 @@ async def ready():
 
 @app.get("/api/classes")
 async def classes(authorization: str | None = Header(default=None)):
-    firebase_user(_bearer_token(authorization))
+    await asyncio.to_thread(firebase_user, _bearer_token(authorization))
     try:
         return {"classes": await list_classes()}
     except Exception as exc:  # noqa: BLE001 - dependency boundary hides internal errors.
@@ -329,7 +329,7 @@ async def classes(authorization: str | None = Header(default=None)):
 
 @app.delete("/api/session/{session_id}")
 async def close_session(session_id: str, authorization: str | None = Header(default=None)):
-    uid = firebase_user(_bearer_token(authorization))
+    uid = await asyncio.to_thread(firebase_user, _bearer_token(authorization))
     async with session_registry_lock:
         state = sessions.get(session_id)
     if state and state["uid"] == uid:
@@ -345,7 +345,7 @@ async def chat(
     body: ChatRequest,
     authorization: str | None = Header(default=None),
 ):
-    uid = firebase_user(_bearer_token(authorization))
+    uid = await asyncio.to_thread(firebase_user, _bearer_token(authorization))
     message = body.message.strip()
     if not message:
         raise HTTPException(422, "A mensagem não pode ficar vazia.")

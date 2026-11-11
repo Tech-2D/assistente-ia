@@ -23,6 +23,60 @@ def test_chat_requires_firebase_bearer_token(client):
     assert response.status_code == 401
 
 
+@pytest.mark.asyncio
+async def test_slow_counter_does_not_block_event_loop(monkeypatch):
+    import asyncio
+    import threading
+    import time
+
+    release = threading.Event()
+
+    class SlowLimiter:
+        def consume(self, uid):
+            release.wait(timeout=1.5)
+            return 1
+
+    monkeypatch.setattr(main, "limiter", SlowLimiter())
+    body = main.ChatRequest(message="What is 2 + 2?")
+    start = time.monotonic()
+    task = asyncio.create_task(main._process_chat(body, "user", body.message, "session", {}))
+    try:
+        await asyncio.sleep(0.05)
+        elapsed = time.monotonic() - start
+    finally:
+        release.set()
+    await task
+    assert elapsed < 0.8
+
+
+@pytest.mark.asyncio
+async def test_slow_firebase_verification_does_not_block_event_loop(monkeypatch):
+    import asyncio
+    import threading
+    import time
+
+    release = threading.Event()
+
+    def slow_verification(token):
+        release.wait(timeout=1.5)
+        return "user"
+
+    async def classes():
+        return ["Turma A"]
+
+    monkeypatch.setattr(main, "firebase_user", slow_verification)
+    monkeypatch.setattr(main, "list_classes", classes)
+    start = time.monotonic()
+    task = asyncio.create_task(main.classes(authorization="Bearer test"))
+    try:
+        await asyncio.sleep(0.05)
+        elapsed = time.monotonic() - start
+    finally:
+        release.set()
+    assert await task == {"classes": ["Turma A"]}
+    assert elapsed < 0.8
+
+
 def test_readiness_is_unavailable_until_groq_is_configured(client, monkeypatch):
     monkeypatch.setattr(main.settings, "groq_api_key", "")
     monkeypatch.setattr(main.settings, "groq_api_keys", "")
