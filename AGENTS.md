@@ -53,13 +53,15 @@ Uma credencial alternativa fornecida foi usada temporariamente em memória para 
 
 O teste de integração com o banco real também confirmou `transaction_isolation=repeatable read` e `transaction_read_only=on`. Ele não simula alterações concorrentes no banco; nenhum dado foi alterado. Os testes com conexões simuladas verificam o encerramento da transação antes do fechamento, inclusive em falhas e cancelamentos.
 
+Em 11/11/2026, o formato dos links dos cards foi comparado ao código da `main` da Agenda e ao site publicado. Os 163 IDs então presentes no banco atendiam ao formato aceito; cinco atividades recentes retornaram HTTP 200 no catálogo SQL publicado com o mesmo ID, e uma delas abriu seus detalhes no navegador na Agenda publicada. Trata-se de uma amostra, não de garantia para todas as atividades ou para futuras mudanças. O catálogo legado retornou 404 para a mesma amostra; a versão publicada inspecionada usa o catálogo SQL.
+
 O frontend da Agenda usa um catálogo HTTP público em Cloudflare. Uma leitura exploratória desse catálogo retornou atividades e metadados de atualização, mas não forneceu os modelos de recorrência necessários para os resumos e a verificação de ocorrências. Não se deve trocar silenciosamente a ferramenta por esse catálogo sem verificar cobertura de datas, frescor e as regras de recorrência; um eventual modo alternativo exige comunicar qualquer limitação de forma clara.
 
 ## Pendências e limitações conhecidas
 
 1. No novo computador, configurar Groq, banco, CA e Firebase fora do Git; testar login real, `/ready` e conversas completas com modelo e ferramenta. `/ready` positivo não comprova essas integrações de ponta a ponta.
 2. Testar a interpretação de “segunda”, outras datas e matérias ambíguas com o modelo Groq real.
-3. Validar a integração com a Agenda. O `localStorage` pertence à origem do navegador: a tela separada só lê a preferência da Agenda se estiver na mesma origem. Em origens diferentes, será necessário passar o contexto adequadamente. Validar também o link dos cards no site real.
+3. Validar a integração com a Agenda. O `localStorage` pertence à origem do navegador: a tela separada só lê a preferência da Agenda se estiver na mesma origem. Em origens diferentes, será necessário passar o contexto adequadamente. Ampliar a validação dos links dos cards além da amostra descrita acima.
 4. Validar com o modelo Groq real se a expressão original da matéria é preservada até o resolvedor, inclusive em pedidos com prefixos numerados, apelidos e nomes ambíguos.
 5. Planejar o botão flutuante e o chat no sistema. A tela atual é de testes. Ampliar a validação do encerramento ao fechar ou recarregar para navegadores e backend reais, preservando o fallback de expiração quando a requisição de descarte falhar.
 6. Antes de múltiplas instâncias, substituir sessões em memória e contador SQLite por armazenamento compartilhado e revisar limites, logs, autenticação e operação. A espera entre tentativas de chaves também é local ao processo; validar a alternância com chaves reais e considerar cotas compartilhadas.
