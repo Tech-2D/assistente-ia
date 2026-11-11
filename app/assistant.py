@@ -556,6 +556,12 @@ def is_in_scope(message: str) -> bool:
         "buscar",
         "consulte",
         "consultar",
+        "troque",
+        "trocar",
+        "mude",
+        "mudar",
+        "altere",
+        "alterar",
         "procure",
         "quando",
         "existe",
@@ -693,10 +699,15 @@ def requests_multiple_classes(message: str, classes: list[str]) -> bool:
         "mais de uma turma",
         "turmas diferentes",
         "all classes",
-        "outra turma",
-        "mais uma turma",
+        "e outra turma",
+        "e mais uma turma",
+        "tambem outra turma",
+        "alem de outra turma",
+        "junto com outra turma",
     )
     if any(_class_key(phrase) in text for phrase in all_classes_phrases):
+        return True
+    if re.search(r"\b(?:e|alem de|junto com)\s+(?:(?:de|da|uma)\s+)?outra\s+turma\b", text):
         return True
     if re.search(r"\b(?:duas|dois|[2-9]|varias|todas|cada)\s+(?:as?\s+)?turmas?\b", text):
         return True

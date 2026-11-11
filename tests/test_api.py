@@ -110,6 +110,28 @@ def test_multiple_classes_are_rejected_before_model_call(client, monkeypatch):
     )
 
 
+def test_switch_to_another_single_class_reaches_classifier(client, monkeypatch):
+    monkeypatch.setattr(main.settings, "groq_api_key", "configured-for-test")
+
+    async def classes():
+        return ["2° TECH D", "2° TECH E"]
+
+    class FakeGraph:
+        async def ainvoke(self, inputs):
+            assert inputs["message"] == "Troque para outra turma, 2° TECH E"
+            return {"intent": RequestIntent(action="consult"), "answer": "Consulta recebida"}
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    monkeypatch.setattr(main, "build_assistant_graph", lambda **kwargs: FakeGraph())
+    response = client.post(
+        "/api/chat",
+        headers={"Authorization": "Bearer test-token"},
+        json={"message": "Troque para outra turma, 2° TECH E"},
+    )
+    assert response.status_code == 200
+    assert response.json()["answer"] == "Consulta recebida"
+
+
 def test_monday_request_reaches_classifier_on_a_monday(client, monkeypatch):
     from datetime import date
 

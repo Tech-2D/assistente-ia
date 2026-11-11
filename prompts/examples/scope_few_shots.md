@@ -24,6 +24,12 @@ Intent: `action=consult`, `include_general=false`.
 Usuário: Quero ver as provas de todas as turmas.
 Intent: `action=clarify`, `clarification_reason=multiple_classes`. Nunca faça várias consultas.
 
+Usuário: Consulte outra turma, 2° TECH E.
+Intent: `action=consult`, `class_id=2° TECH E`. É uma troca para uma única turma.
+
+Usuário: Quero provas da 2° TECH D e de outra turma também.
+Intent: `action=clarify`, `clarification_reason=multiple_classes`.
+
 Usuário: Tem prova de desenvolvimento do app?
 Intent: `action=consult`, `subject=desenvolvimento do app`. Deixe o resolvedor pedir Mobile ou DAD; não adivinhe.
 

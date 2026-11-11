@@ -30,6 +30,11 @@ def test_server_detects_multiple_classes_before_model_selection():
     assert requests_multiple_classes("Quais provas temos nas turmas de matemática?", classes)
     assert requests_multiple_classes("Quais provas temos nas turmas 2º Tec D e 2º Tec E?", classes)
     assert not requests_multiple_classes("Quais provas temos na turma 2° TECH D?", classes)
+    assert not requests_multiple_classes("Quero consultar outra turma", classes)
+    assert not requests_multiple_classes("Troque para outra turma, 2° TECH E", classes)
+    assert requests_multiple_classes("Provas da 2° TECH D e outra turma", classes)
+    assert requests_multiple_classes("Provas da 2° TECH D e de outra turma também", classes)
+    assert requests_multiple_classes("Provas da 2° TECH D e mais uma turma", classes)
     assert _mentioned_classes("Consulta a turma 2º Tec D", classes) == ["2° TECH D"]
 
 
