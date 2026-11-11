@@ -1,0 +1,10 @@
+.venv/
+.env
+.env.*
+!.env.example
+*.sqlite3
+work/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/

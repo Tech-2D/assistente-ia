@@ -1,0 +1,67 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #f5f7fb;
+  color: #172033;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.shell { width: min(760px, 100% - 32px); margin: 36px auto; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 800; }
+.eyebrow { margin: 0; color: #667085; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+h1 { margin: 0; font-size: 22px; }
+.status { color: #526175; font-size: 12px; }
+.panel { background: white; border: 1px solid #e1e7f0; border-radius: 16px; box-shadow: 0 8px 30px #15213a0c; }
+.login { max-width: 440px; margin: 40px auto; padding: 28px; }
+.login h2 { margin: 0 0 4px; font-size: 19px; }
+.login p { margin: 0 0 22px; color: #64748b; }
+form label { display: grid; gap: 6px; margin: 12px 0; font-size: 13px; font-weight: 650; }
+input, select, textarea { padding: 10px 12px; border: 1px solid #d2dbea; border-radius: 9px; background: #fff; color: inherit; font: inherit; }
+input:focus, select:focus, textarea:focus { outline: 3px solid #bfdbfe; border-color: #3b82f6; }
+button { cursor: pointer; font: inherit; }
+.primary { padding: 10px 16px; border: 0; border-radius: 9px; background: #1d4ed8; color: #fff; font-weight: 700; }
+.primary:hover { background: #1e40af; }
+.primary:disabled { cursor: wait; opacity: .65; }
+.login .primary { width: 100%; margin-top: 8px; }
+.error { min-height: 20px; color: #b42318 !important; font-size: 13px; }
+.chat { overflow: hidden; }
+.context { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #e8edf4; }
+.class-filter { display: grid; gap: 4px; width: min(340px, 75%); }
+.context label { font-size: 12px; font-weight: 700; }
+.context select { width: 100%; padding: 8px; }
+.class-filter small { color: #718096; font-size: 11px; }
+.quiet { padding: 8px; border: 0; background: transparent; color: #475569; font-size: 12px; font-weight: 650; }
+.quiet:hover { color: #1d4ed8; }
+.messages { display: flex; height: min(58vh, 540px); min-height: 310px; flex-direction: column; gap: 12px; overflow: auto; padding: 20px; }
+.bubble { max-width: 88%; padding: 11px 14px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.assistant { align-self: flex-start; background: #f0f4fa; }
+.assistant a { color: #1d4ed8; }
+.user { align-self: flex-end; background: #1d4ed8; color: #fff; }
+.composer { display: flex; align-items: end; gap: 10px; padding: 12px 16px; border-top: 1px solid #e8edf4; }
+.composer textarea { max-height: 150px; min-height: 44px; flex: 1; resize: vertical; }
+.composer button { height: 44px; }
+.cards { display: grid; max-width: 88%; gap: 8px; margin-top: 10px; }
+.activity-card { display: block; padding: 12px 14px; border: 1px solid #dce4f0; border-radius: 11px; background: #fff; color: inherit; text-decoration: none; }
+.activity-card:hover { border-color: #4f7de2; box-shadow: 0 3px 10px #1d4ed815; }
+.activity-card strong { display: block; overflow-wrap: anywhere; }
+.meta { margin-top: 3px; color: #667085; font-size: 12px; }
+.recurrence { color: #344b79; }
+.badge { display: inline-block; margin: 6px 5px 0 0; padding: 2px 7px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 10px; font-weight: 750; }
+.badge.changed { background: #fff7ed; color: #9a3412; }
+footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-top: 1px solid #f0f2f6; color: #667085; font-size: 12px; }
+.fineprint { margin-top: 14px; color: #7b8798; font-size: 12px; text-align: center; }
+.hidden { display: none !important; }
+
+@media (max-width: 560px) {
+  .shell { width: 100%; margin: 0 auto; }
+  .shell > header { padding: 16px; }
+  .panel { border-radius: 0; }
+  .context { flex-wrap: wrap; }
+  .class-filter { width: 100%; }
+  .messages { height: calc(100dvh - 270px); min-height: 280px; }
+  .login { margin: 28px 16px; border-radius: 14px; }
+  .fineprint { padding: 0 16px; }
+}

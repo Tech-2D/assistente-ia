@@ -1,0 +1,36 @@
+# Uma expressão por linha. Normalização remove caixa/acentos e substitui leetspeak.
+# Lista inicial conservadora; revisão de produto recomendada antes de produção.
+filho da puta
+puta
+puto
+puta que pariu
+arrombado
+arrombada
+buceta
+caralho
+merda
+idiota
+imbecil
+retardado
+retardada
+viado
+bicha
+vagabundo
+vagabunda
+vadia
+desgraçado
+desgraçada
+fdp
+f d p
+macaco
+macaca
+macaco imundo
+macaca imunda
+preto imundo
+preta imunda
+negro imundo
+negra imunda
+crioulo imundo
+escravo
+nigger
+nigga
