@@ -3,7 +3,7 @@ from app.db import read_connection
 
 
 async def list_classes() -> list[str]:
-    async for conn in read_connection():
+    async with read_connection() as conn:
         rows = await conn.fetch(
             "SELECT id FROM tech2d.catalog_documents WHERE collection='agendaClasses' AND data->>'active'='true' AND data->>'name'=id ORDER BY id"
         )

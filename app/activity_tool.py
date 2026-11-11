@@ -79,7 +79,7 @@ async def query_activities(
             return {"clarification_code": "invalid_dates"}
         return {"clarification_code": "date_parse"}
 
-    async for conn in read_connection():
+    async with read_connection() as conn:
         subject_rows = await conn.fetch(
             "SELECT DISTINCT subject FROM tech2d.activities "
             "WHERE subject IS NOT NULL ORDER BY subject"

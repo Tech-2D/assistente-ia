@@ -1,4 +1,5 @@
 import ssl
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -44,6 +45,7 @@ def connection_options() -> dict:
     }
 
 
+@asynccontextmanager
 async def read_connection():
     conn = await asyncpg.connect(**connection_options())
     try:

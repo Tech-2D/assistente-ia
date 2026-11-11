@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from datetime import date
 
 import pytest
@@ -43,6 +44,7 @@ async def test_filtered_limit_and_recurrence_override(monkeypatch):
                 return [{"recurring_id": "r1", "date": "2026-11-11"}]
             return [{"id": "r1", "data": model}]
 
+    @asynccontextmanager
     async def connection():
         yield FakeConnection()
 
@@ -74,6 +76,7 @@ async def test_too_many_matching_results_stop_before_recurrence_query(monkeypatc
             assert args[-2:] == (None, [])
             return [object(), object(), object()]
 
+    @asynccontextmanager
     async def connection():
         yield FakeConnection()
 
