@@ -45,7 +45,7 @@ Conversas são em memória por UID e expiram; não existe histórico permanente.
 
 Em 11/11/2026, o serviço FastAPI, a tela de testes separada e a primeira ferramenta `consultar_atividades` estavam implementados. O serviço usa sessões em memória com expiração padrão de 30 minutos e limite configurável de 50 mensagens por usuário ao dia. O contador SQLite armazena hash do UID, data e contagem.
 
-Em 11/11/2026, passaram 38 testes locais com `pytest -q`, além de `ruff check app tests` e `ruff format --check app tests`. Os testes não fazem chamada real ao Groq. Uma execução anterior percorreu API, grafo e ferramenta com identidade/classificador de teste e PostgreSQL real: a sessão confirmou `transaction_read_only = on` e retornou cards. A construção do cliente Groq foi verificada sem chamada real. Login Firebase real e conversa completa com o modelo ainda não foram validados; a configuração local desse computador não tinha `GROQ_API_KEY`.
+Em 11/11/2026, passaram 40 testes locais com `pytest -q`, além de `ruff check app tests` e `ruff format --check app tests`. Os testes não fazem chamada real ao Groq. Uma execução anterior percorreu API, grafo e ferramenta com identidade/classificador de teste e PostgreSQL real: a sessão confirmou `transaction_read_only = on` e retornou cards. Após mudar a consulta para aplicar filtros antes do limite, a nova SQL ainda não foi validada no banco real: as duas tentativas de conexão foram recusadas com `TooManyConnectionsError`. A migração documentada `sql/migrations/001_initial.sql` de `Tech-2D/modelagem-dados` define os campos usados como `text`. A construção do cliente Groq foi verificada sem chamada real. Login Firebase real e conversa completa com o modelo ainda não foram validados; a configuração local desse computador não tinha `GROQ_API_KEY`.
 
 ## Pendências e limitações conhecidas
 
@@ -55,7 +55,7 @@ Em 11/11/2026, passaram 38 testes locais com `pytest -q`, além de `ruff check a
 4. Revisar prefixos numéricos de matérias: o usuário disse para ignorar prefixos como “Matemática 10” ao interpretar o nome significativo, enquanto o resolvedor possui lógica específica para nomes numerados. Confirmar os casos com testes e preservar os apelidos aprovados.
 5. Planejar o botão flutuante e o chat no sistema. A tela atual é de testes. Conferir descarte ao fechar ou recarregar: o servidor mantém sessões até exclusão explícita ou expiração.
 6. Antes de múltiplas instâncias, substituir sessões em memória e contador SQLite por armazenamento compartilhado e revisar limites, logs, autenticação e operação. A alternância entre chaves Groq planejada no memorial não está implementada.
-7. A consulta limita a 10.000 linhas antes de filtrar matéria e tipo em memória; revisar o comportamento com grandes volumes. A lista de turmas combina catálogo e lista fixa, que precisa ser mantida atualizada. A verificação Firebase usa `check_revoked=False`; a política de revogação ainda precisa ser avaliada.
+7. Validar a nova SQL no PostgreSQL real quando houver conexão disponível. Matéria e tipo são filtrados antes do limite de 10.000 resultados; uma consulta separada verifica a existência das ocorrências de recorrência mesmo quando foram alteradas e não coincidem com o filtro. Testar também grandes volumes. A lista de turmas combina catálogo e lista fixa, que precisa ser mantida atualizada. A verificação Firebase usa `check_revoked=False`; a política de revogação ainda precisa ser avaliada.
 
 ## Desenvolver em outro computador
 

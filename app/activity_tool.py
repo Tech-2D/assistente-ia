@@ -18,8 +18,15 @@ LEFT JOIN tech2d.app_documents d
  ON d.collection='recurringActivities' AND d.id=a.recurring_id
 WHERE (a.turma_id=$1 OR ($2 AND a.turma_id IS NULL))
  AND a.date >= $3 AND a.date <= $4
+ AND ($6::text IS NULL OR a.subject=$6)
+ AND (cardinality($7::text[])=0 OR a.type=ANY($7::text[]))
 ORDER BY a.date,a.time NULLS LAST,a.id
 LIMIT $5"""
+
+OCCURRENCE_QUERY = """SELECT DISTINCT a.recurring_id::text AS recurring_id,a.date
+FROM tech2d.activities a
+WHERE a.turma_id=$1 AND a.date >= $2 AND a.date <= $3
+ AND a.recurring_id::text=ANY($4::text[])"""
 
 
 def _iso(value) -> str:
@@ -100,7 +107,12 @@ async def query_activities(
             start.isoformat(),
             finish.isoformat(),
             ACTIVITY_LIMIT + 1,
+            chosen_subject,
+            list(filters.types),
         )
+        if len(rows) > ACTIVITY_LIMIT:
+            return {"error": True, "error_code": "too_many_results"}
+
         recurrence_templates = await conn.fetch(
             "SELECT id,data FROM tech2d.app_documents "
             "WHERE collection='recurringActivities' "
@@ -108,25 +120,36 @@ async def query_activities(
             "AND coalesce(data->>'deleted','false')!='true'",
             class_id,
         )
-
-    if len(rows) > ACTIVITY_LIMIT:
-        return {"error": True, "error_code": "too_many_results"}
+        relevant_templates = [
+            template
+            for template in recurrence_templates
+            if (
+                not chosen_subject
+                or _json_object(template["data"]).get("subject") == chosen_subject
+            )
+            and (not filters.types or _json_object(template["data"]).get("type") in filters.types)
+        ]
+        occurrence_rows = []
+        if relevant_templates:
+            occurrence_rows = await conn.fetch(
+                OCCURRENCE_QUERY,
+                class_id,
+                start.isoformat(),
+                finish.isoformat(),
+                [str(template["id"]) for template in relevant_templates],
+            )
 
     now = today_local()
-    found_occurrences = {(row[7], _iso(row[4])) for row in rows if row[7] is not None}
+    found_occurrences = {(row["recurring_id"], _iso(row["date"])) for row in occurrence_rows}
     missing_occurrences = 0
     unreadable_recurrence_models = False
-    for template in recurrence_templates:
+    for template in relevant_templates:
         model = _json_object(template["data"])
-        if chosen_subject and model.get("subject") != chosen_subject:
-            continue
-        if filters.types and model.get("type") not in filters.types:
-            continue
         if not recurrence_is_valid(model):
             unreadable_recurrence_models = True
             continue
         for expected in expected_dates(model, start, finish, today=now):
-            if (template["id"], expected) not in found_occurrences:
+            if (str(template["id"]), expected) not in found_occurrences:
                 missing_occurrences += 1
 
     items: list[dict] = []
