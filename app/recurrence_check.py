@@ -44,7 +44,10 @@ def recurrence_is_valid(model: dict) -> bool:
         return False
     if not _weekdays(model, first):
         return False
-    last = _parse_date(model.get("endDate"))
+    end_value = model.get("endDate")
+    last = _parse_date(end_value)
+    if end_value not in (None, "") and last is None:
+        return False
     return last is None or last >= first
 
 
@@ -60,6 +63,8 @@ def expected_dates(
     The Agenda projection is the source of truth. This is only a completeness check;
     it never creates an occurrence or presents a model-generated date as an activity.
     """
+    if not recurrence_is_valid(model):
+        return set()
     try:
         first = _parse_date(model.get("startDate"))
         if first is None:
@@ -90,6 +95,8 @@ def expected_dates(
 
 def recurrence_summary(model: dict) -> str | None:
     """Describe a confirmed active recurrence from its stored model fields."""
+    if not recurrence_is_valid(model):
+        return None
     first = _parse_date(model.get("startDate"))
     if first is None:
         return None

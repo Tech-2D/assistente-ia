@@ -1,6 +1,8 @@
 from datetime import date
 
-from app.recurrence_check import expected_dates, recurrence_summary
+import pytest
+
+from app.recurrence_check import expected_dates, recurrence_is_valid, recurrence_summary
 
 
 def test_expected_weekly_dates_use_sunday_zero_and_56_day_horizon():
@@ -54,3 +56,18 @@ def test_recurrence_summary_reports_stored_weekdays_and_end_date():
         "intervalWeeks": 1,
     }
     assert recurrence_summary(model) == "Toda quarta-feira e sexta-feira até 16/12/2026"
+
+
+@pytest.mark.parametrize("end", ["data inválida", "2026-02-30", "2026-11-10", 42])
+def test_invalid_end_never_becomes_an_unbounded_recurrence(end):
+    model = {"startDate": "2026-11-11", "endDate": end, "weekdays": [3]}
+    assert not recurrence_is_valid(model)
+    assert recurrence_summary(model) is None
+    assert expected_dates(model, date(2026, 11, 11), date(2026, 12, 31)) == set()
+
+
+@pytest.mark.parametrize("end", [None, ""])
+def test_missing_end_is_a_valid_open_ended_recurrence(end):
+    model = {"startDate": "2026-11-11", "endDate": end, "weekdays": [3]}
+    assert recurrence_is_valid(model)
+    assert recurrence_summary(model) == "Toda quarta-feira"
