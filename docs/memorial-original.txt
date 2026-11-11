@@ -1,0 +1,668 @@
+Memorial descritivo — Assistente de IA da Tech-2D
+
+Este documento reúne o contexto, os objetivos e as decisões tomadas para criar um assistente de IA para o ecossistema Tech-2D. Ele pode ser usado como contexto inicial em outra conversa ou como base para o planejamento técnico do projeto.
+
+Situação atual: o projeto ainda está em fase de definição. Nenhuma implementação foi solicitada ou realizada até o momento.
+
+
+---
+
+1. Objetivo do projeto
+
+Criar um assistente de inteligência artificial para ajudar os usuários do sistema Tech-2D a consultar informações e executar ações pontuais por meio de uma conversa.
+
+O assistente deverá permitir pedidos como:
+
+- “Quais atividades temos nesta semana?”
+- “Quais provas teremos amanhã?”
+- “Tem algum trabalho de matemática?”
+- “Quais cartões estão pendentes no meu Kanban?”
+- “Crie um cartão para estudar matemática.”
+- “Encontre minhas atividades desta semana e crie cartões para elas.”
+
+A proposta é oferecer um chat rápido de auxílio, integrado ao sistema existente. O usuário abre o chat, faz sua consulta ou solicita uma ação e fecha. A conversa não precisa ficar salva permanentemente.
+
+O desenvolvimento deve priorizar uma arquitetura profissional, organizada, segura e com custo de uso tão próximo de zero quanto possível, utilizando os recursos gratuitos disponíveis.
+
+
+---
+
+2. Sistemas da organização
+
+A organização analisada é a Tech-2D no GitHub.
+
+Durante a investigação, foram encontrados estes repositórios acessíveis:
+
+2.1. Agenda
+
+Repositório: Tech-2D/Agenda
+
+O sistema inclui funcionalidades como:
+
+- Calendário de atividades por turma.
+- Tarefas, lições, trabalhos, provas e eventos.
+- Eventos gerais exibidos para todas as turmas.
+- Descrições, datas, horários, matérias e anexos de atividades.
+- Atividades recorrentes.
+- Quadro de avisos.
+- Sugestões de atividades.
+- Enquetes.
+- Kanban pessoal.
+- Kanban compartilhado.
+
+O Kanban possui quadros, colunas e cartões. Os cartões podem conter título, descrição, prioridade, prazo, etiquetas, checklist e, em alguns casos, responsável.
+
+2.2. Cadê o professor?
+
+Repositório: Tech-2D/professores
+
+Sistema para consultar horários cadastrados de professores, incluindo:
+
+- Nome.
+- Matéria.
+- Turma.
+- Dia e horário.
+- Andar.
+- Descrição da sala.
+
+A localização exibida decorre do horário cadastrado. Portanto, o sistema não confirma a localização física do professor em tempo real.
+
+2.3. Caderno Infinito
+
+Repositório: Tech-2D/caderno-infinito
+
+Sistema de anotações coletivas, com:
+
+- Título.
+- Conteúdo em Markdown.
+- Matéria.
+- Turma opcional.
+- Autor.
+- Busca e filtros.
+
+O sistema permite consultar materiais publicados e poderá futuramente ser integrado ao assistente.
+
+2.4. Limitação da investigação realizada
+
+Os repositórios acessíveis foram inspecionados para entender as funcionalidades e os modelos de dados utilizados pelo frontend.
+
+Porém, o esquema real do PostgreSQL e o código completo do backend SQL ainda não foram confirmados. Também não foi possível garantir a implementação concreta das consultas e gravações sem conhecer:
+
+- Tabelas e relacionamentos.
+- Estrutura de permissões.
+- Endpoints disponíveis.
+- Regras de negócio no backend.
+- Tratamento de concorrência.
+- Ambiente de desenvolvimento e dados de teste.
+
+Essas informações precisam ser verificadas antes da implementação das tools que dependem do banco.
+
+
+---
+
+3. Escopo do assistente
+
+O assistente deverá atuar dentro do contexto do ecossistema Tech-2D, ajudando na consulta e organização de informações escolares presentes nos sistemas.
+
+O contexto fornecido ao modelo deve ser bem delimitado, para reduzir:
+
+- Fuga de contexto.
+- Fuga de escopo.
+- Respostas inventadas.
+- Afirmações sem dados que as sustentem.
+- Uso de funcionalidades que não existem.
+- Execução de ações sem permissão.
+
+O assistente deve distinguir claramente:
+
+- Dados consultados no sistema.
+- Informações que o usuário forneceu.
+- Sugestões ou explicações geradas pela IA.
+- Dados que não estão disponíveis.
+- Falhas técnicas na consulta.
+
+Por exemplo:
+
+- Se a consulta falhar, não deve dizer que não existem atividades.
+- Se não houver status de conclusão individual na Agenda, não deve afirmar que o aluno concluiu ou deixou de concluir uma atividade.
+- Não deve dizer que um cartão foi criado se a gravação não foi confirmada.
+- Não deve afirmar que um professor está fisicamente em uma sala; deve indicar que aquela é a informação do horário cadastrado.
+
+Ponto ainda não totalmente definido: decidir se a IA poderá responder perguntas gerais sobre matérias escolares sem consultar o Caderno Infinito ou se ficará restrita às funcionalidades e informações do sistema. A diretriz já estabelecida é manter o escopo muito bem definido.
+
+
+---
+
+4. Arquitetura geral desejada
+
+A arquitetura inicial deverá ter:
+
+- Uma API de IA em Python.
+- LangChain para integração do modelo e das tools.
+- LangGraph para orquestrar o fluxo.
+- Um agente principal.
+- Tools específicas para consultar ou alterar funcionalidades permitidas.
+- Guardrail de entrada.
+- Guardrail de saída.
+- Validações de autorização e parâmetros antes das tools.
+- Contexto temporário enquanto o chat estiver aberto.
+- Integração com PostgreSQL, respeitando o backend e as regras existentes.
+- Interface de chat simples no frontend.
+
+Fluxo conceitual:
+
+flowchart TD
+    A["Usuário envia mensagem"] --> B["Validar autenticação"]
+    B --> C["Verificar limite de mensagens"]
+    C --> D["Guardrail de entrada"]
+    D -->|"Permitido"| E["Agente principal"]
+    D -->|"Bloqueado"| F["Mensagem fixa ao usuário"]
+
+    E -->|"Consulta"| G["Tool de leitura"]
+    E -->|"Criação"| H["Validar dados e permissões"]
+    E -->|"Resposta direta"| I["Preparar resposta"]
+
+    G --> I
+    H --> J{"Confirmação necessária?"}
+    J -->|"Sim"| K["Mostrar proposta e aguardar"]
+    J -->|"Não"| L["Executar operação"]
+    K -->|"Confirmada"| L
+    L --> I
+
+    I --> M["Guardrail de saída"]
+    M --> N["Exibir resposta"]
+
+O LangGraph deverá controlar o fluxo, inclusive:
+
+- Caminhos de leitura e escrita.
+- Pedidos de esclarecimento.
+- Confirmações quando necessárias.
+- Erros.
+- Retorno de resultados.
+- Verificações antes da resposta final.
+
+Quantidade de agentes
+
+A primeira versão deverá usar um agente principal, que pode responder diretamente ou usar tools.
+
+Agenda, Kanban, Professores e Caderno serão organizados como grupos de tools e funcionalidades, sem necessidade inicial de um agente de IA separado para cada área.
+
+Um roteador com outro modelo ou agentes especializados poderão ser avaliados futuramente se houver necessidade comprovada.
+
+
+---
+
+5. Autenticação e identidade
+
+O assistente exigirá que o usuário esteja logado.
+
+O frontend enviará o token de autenticação para a API da IA. A API deverá:
+
+1. Validar o token.
+2. Obter o identificador do usuário a partir do token validado.
+3. Carregar o contexto e as permissões necessárias.
+4. Autorizar cada operação antes de consultar dados privados ou executar uma escrita.
+
+O frontend pode enviar o ID do usuário como informação auxiliar, mas a API não deve confiar somente nesse ID: a identidade usada para autorização precisa vir do token validado.
+
+A IA deve respeitar as mesmas permissões existentes no sistema, incluindo:
+
+- Acesso ao próprio Kanban pessoal.
+- Acesso a quadros compartilhados em que o usuário seja dono ou participante autorizado.
+- Restrições de representantes e administradores para funcionalidades que venham a ser adicionadas.
+
+
+---
+
+6. Banco de dados e backend
+
+O projeto utilizará PostgreSQL para integração com os dados do sistema.
+
+Antes de implementar qualquer tool real, deve-se confirmar:
+
+- Onde está o repositório do backend PostgreSQL.
+- Qual é o esquema atualizado.
+- Como o sistema representa atividades, quadros e cartões.
+- Como as permissões são aplicadas.
+- Quais operações já estão disponíveis pela API existente.
+- Como são tratados conflitos e gravações simultâneas.
+- Como configurar um ambiente local seguro para testes.
+
+A implementação deve priorizar a reutilização das regras e serviços existentes, quando possível, para evitar que a IA aplique regras diferentes das utilizadas pela interface principal.
+
+Não se deve presumir a estrutura do PostgreSQL com base apenas nos tipos do frontend.
+
+Escritas e concorrência
+
+Ao criar cartões, a solução deve garantir que:
+
+- O usuário tenha acesso ao quadro.
+- O quadro e a coluna existam.
+- Os campos respeitem as regras do sistema.
+- A gravação não sobrescreva alterações recentes de outras pessoas.
+- Repetições de requisição não criem cartões duplicados.
+- A resposta só informe sucesso após a confirmação da operação.
+
+
+---
+
+7. Tools do assistente
+
+As tools serão definidas uma por uma, antes de sua implementação.
+
+Cada tool deverá ter uma especificação clara com:
+
+- Nome.
+- Objetivo.
+- Descrição para o agente.
+- Situações em que deve ser usada.
+- Parâmetros.
+- Padrões e valores opcionais.
+- Regras de autorização.
+- Resultado estruturado.
+- Tratamento de erros.
+- Condições de confirmação, quando houver escrita.
+- Fontes e regras de dados verificadas no backend.
+
+7.1. Limite inicial de ações no Kanban
+
+Para o Kanban, o escopo desejado por enquanto é:
+
+- Consultar cartões.
+- Criar cartões.
+
+Não estão incluídas neste momento ações de editar, mover ou excluir cartões pela IA.
+
+Quando o assistente apresentar um cartão consultado, o usuário poderá clicar no resultado e ser levado à interface real do sistema, para continuar a interação manualmente.
+
+Será necessário verificar se o frontend já possui navegação direta para o quadro ou cartão específico. Caso não possua, essa navegação poderá ser implementada posteriormente.
+
+7.2. Primeira tool definida: consultar_atividades
+
+Objetivo: consultar tarefas, lições, trabalhos, provas e eventos de uma turma por período.
+
+Exemplos de uso:
+
+- “O que temos para esta semana?”
+- “Quais provas teremos amanhã?”
+- “Tem trabalho de matemática de 15 a 30 de novembro?”
+- “Quais atividades temos na segunda?”
+
+Descrição para a IA:
+
+> Consulta atividades cadastradas na Agenda para uma turma e um período. Pode filtrar por tipo e matéria. Retorna atividades da turma e, quando habilitado, eventos gerais. Use para perguntas sobre provas, trabalhos, tarefas, lições e eventos. Não afirme que o aluno concluiu ou deixou de concluir uma atividade sem uma fonte que forneça essa informação.
+
+
+
+Parâmetros:
+
+Parâmetro	Obrigatório	Descrição
+
+start_date	Não	Data inicial, no formato AAAA-MM-DD.
+finish_date	Não	Data final, no formato AAAA-MM-DD.
+tipos	Não	Filtro por tarefa, lição, trabalho, prova ou evento.
+materia	Não	Filtro por matéria.
+incluir_eventos_gerais	Não	Inclui eventos gerais; padrão true.
+
+
+Turma:
+
+- Usar a turma selecionada no contexto validado da sessão.
+- Se não houver turma, perguntar ao usuário.
+- Se o usuário solicitar outra turma, respeitar as regras de acesso existentes.
+
+Período padrão:
+
+- Se nenhuma data for informada: hoje e os seis dias seguintes, totalizando sete dias corridos.
+- Se somente a data inicial for informada: sete dias corridos a partir dela.
+- Se ambas forem informadas: considerar o intervalo informado, incluindo os dois dias.
+- Se somente a data final for informada: pedir a data inicial.
+- Se a data inicial for posterior à final: solicitar correção.
+- “Esta semana” e “próxima semana” devem ser interpretadas como semanas de calendário.
+- Usar o fuso America/Sao_Paulo.
+
+Resultado esperado:
+
+- Turma consultada.
+- Período efetivamente utilizado.
+- Lista de atividades.
+- ID, título, tipo, matéria, data e horário de cada atividade.
+- Informações adicionais somente quando necessárias e disponíveis.
+
+Casos sem resultado e falhas:
+
+- Sem atividades encontradas: informar que não há resultados para os filtros e período usados.
+- Falha de consulta: informar indisponibilidade ou erro, sem concluir que não há atividades.
+
+Dependência antes de implementar: conhecer o esquema PostgreSQL e a API efetivamente utilizada.
+
+7.3. Demais tools
+
+Outras tools serão definidas individualmente após a primeira. As áreas consideradas incluem:
+
+- Detalhes de uma atividade.
+- Avisos.
+- Consulta de quadros e cartões.
+- Criação de cartões.
+- Horários de professores.
+- Busca e leitura de anotações.
+
+A relação exata de tools e sua ordem ainda devem ser detalhadas uma por uma.
+
+
+---
+
+8. Guardrails
+
+O projeto terá guardrail de entrada e guardrail de saída.
+
+A ferramenta Jev foi considerada anteriormente, mas o usuário decidiu não utilizá-la. A arquitetura inicial seguirá sem Jev.
+
+8.1. Guardrail de entrada
+
+Deverá verificar, entre outros pontos:
+
+- Validade da autenticação.
+- Tamanho e formato da mensagem.
+- Limites de uso.
+- Termos e expressões bloqueados.
+- Possíveis tentativas de obter acesso indevido.
+- Tentativas de manipular o comportamento do assistente.
+- Entradas inválidas ou que precisem de esclarecimento.
+
+8.2. Lista de palavras bloqueadas
+
+O usuário quer uma lista de palavras e expressões ofensivas, incluindo insultos racistas, suas variantes e outros termos definidos pelo projeto.
+
+Ao identificar uma correspondência bloqueada, o sistema deve:
+
+1. Interromper o fluxo antes do agente.
+2. Retornar uma mensagem fixa e robótica, definida pelo produto.
+3. Evitar enviar a mensagem bloqueada para execução normal do agente.
+
+A lista deve ser organizada e configurável.
+
+Devem ser considerados testes para:
+
+- Variações de escrita.
+- Letras maiúsculas e minúsculas.
+- Acentos e caracteres semelhantes.
+- Falsos positivos em palavras maiores.
+- Contextos legítimos, se a política do produto decidir permiti-los.
+
+Uma lista de palavras reduz alguns casos, mas não identifica todas as formas de abuso ou manipulação.
+
+8.3. Validações antes das tools
+
+Cada tool deverá validar:
+
+- Identidade do usuário.
+- Permissões para o recurso solicitado.
+- Existência dos registros.
+- Tipos e valores dos parâmetros.
+- Regras de negócio.
+- Necessidade de confirmação.
+- Integridade da operação.
+
+Essas verificações devem ocorrer no backend, independentemente de instruções dadas ao modelo.
+
+8.4. Guardrail de saída
+
+Antes de exibir a resposta, o sistema deverá verificar, conforme possível:
+
+- Se alguma escrita foi realmente confirmada.
+- Se há exposição indevida de dados.
+- Se a resposta contradiz um erro retornado por uma tool.
+- Se existem informações internas, chaves ou detalhes sensíveis.
+- Se a resposta segue o escopo do assistente.
+
+O conteúdo de atividades, anotações ou cartões deve ser tratado como dado consultado, não como instrução para alterar o comportamento do agente.
+
+Para garantir que a saída passe pela verificação, a resposta deverá ser validada antes de ser exibida ao usuário.
+
+
+---
+
+9. Configuração e organização do projeto
+
+A API de IA deverá possuir um arquivo central de configuração, como config.py.
+
+Responsabilidade do config.py
+
+- Ler as variáveis de ambiente.
+- Validar as configurações necessárias.
+- Disponibilizar essas configurações para os demais arquivos.
+- Centralizar configurações como modelos, chaves, limites, ambiente e parâmetros do serviço.
+
+Os demais arquivos devem importar as configurações do config.py, em vez de acessar as variáveis de ambiente diretamente.
+
+Organização dos prompts
+
+O usuário quer separar:
+
+- Prompts principais.
+- Partes reutilizáveis dos prompts.
+- Instruções por funcionalidade.
+- Exemplos de uso.
+- Exemplos do tipo few-shot.
+- Regras de escopo e comportamento.
+
+Esses conteúdos devem ficar em arquivos e diretórios específicos, com organização que facilite revisão e manutenção.
+
+Uma estrutura ilustrativa seria:
+
+app/
+├── config.py
+├── api/
+├── agent/
+├── tools/
+│   ├── agenda/
+│   └── kanban/
+├── guardrails/
+├── providers/
+└── prompts/
+    ├── system/
+    ├── scope/
+    ├── tools/
+    └── examples/
+
+Essa estrutura é uma sugestão inicial; poderá ser ajustada durante o planejamento técnico.
+
+
+---
+
+10. Groq e chaves de API
+
+O provedor de modelos escolhido para a proposta inicial é a Groq, priorizando recursos gratuitos.
+
+A intenção do usuário é:
+
+- Reunir as chaves dos desenvolvedores nas variáveis de ambiente do backend.
+- Centralizar a leitura e validação dessas configurações no config.py.
+- Utilizar uma lista de chaves.
+- Caso uma chave fique indisponível, tentar outra conforme as regras de fallback definidas.
+
+O usuário informou que consultou a Groq por e-mail e recebeu autorização para seguir com esse arranjo. Essa confirmação foi informada pelo usuário; a resposta da Groq não foi analisada diretamente nesta conversa.
+
+Antes da implementação, será necessário definir:
+
+- Quais erros permitem tentar outra chave.
+- Limite de tentativas.
+- Tempo de espera.
+- Como identificar indisponibilidade temporária.
+- Como evitar tentativas repetidas desnecessárias.
+- Como agir quando nenhuma chave estiver disponível.
+- Como evitar duplicação de uma operação que já tenha sido executada.
+- Como proteger as chaves e evitar que apareçam em logs.
+
+As chaves devem existir somente no backend e não devem ser enviadas ao frontend ou incluídas em arquivos versionados.
+
+
+---
+
+11. Limite diário de mensagens
+
+O assistente terá um limite de mensagens por usuário.
+
+Regra inicial
+
+- 50 mensagens por usuário por dia.
+- O limite deve estar ativo durante os testes.
+- O valor deve ser configurável.
+- Deve ser possível desativar o limite em ambiente de desenvolvimento.
+- A contagem deve reiniciar à meia-noite no fuso America/Sao_Paulo.
+- A API da IA será responsável por verificar o limite antes de processar a mensagem.
+- O usuário será identificado pelo UID obtido do token validado.
+
+O frontend poderá exibir quantas mensagens ainda estão disponíveis, mas o controle efetivo deverá ocorrer no backend.
+
+Persistência do contador
+
+Embora as conversas não sejam salvas, o contador precisa permanecer disponível depois que o usuário fecha o chat.
+
+Os dados mínimos podem ser:
+
+{
+  "usuario_id": "uid-validado",
+  "data": "2026-11-10",
+  "mensagens_utilizadas": 3
+}
+
+O contador não precisa armazenar o conteúdo das mensagens.
+
+A verificação e o incremento deverão ser atômicos, para impedir que requisições simultâneas ultrapassem o limite.
+
+Requisições repetidas devem poder ser identificadas para evitar contagem duplicada.
+
+Desativar ou zerar o limite
+
+O usuário quer uma forma de desativar ou zerar o limite durante o desenvolvimento, inclusive cogitando uma frase como:
+
+> “zerar limite”
+
+
+
+Essa frase não deve funcionar livremente para qualquer usuário. A proposta é:
+
+- Permitir desativação por configuração em ambiente local.
+- Caso o comando seja implementado, aceitá-lo apenas em modo de desenvolvimento e para usuário autorizado.
+- Não liberar esse comando para usuários comuns em produção.
+
+Um limite global da aplicação também poderá ser avaliado antes da abertura pública, já que a cota do modelo é compartilhada entre usuários.
+
+
+---
+
+12. Memória e histórico
+
+O assistente não terá histórico permanente de conversas.
+
+Durante a sessão aberta, o sistema deverá manter contexto temporário suficiente para entender continuações:
+
+> Usuário: “Quais provas temos esta semana?”
+IA: “Matemática na quinta e Estatística na sexta.”
+Usuário: “Crie um cartão para estudar para a primeira.”
+
+
+
+Nesse caso, o assistente deverá entender que “a primeira” se refere à prova de Matemática.
+
+Regras
+
+- Ao abrir o chat, inicia-se uma conversa.
+- Enquanto estiver aberto, o contexto é mantido temporariamente.
+- Ao fechar o chat, o contexto é descartado.
+- Ao recarregar a página, a conversa também desaparece.
+- Ao abrir novamente, a conversa começa do zero.
+- Ações ainda não confirmadas devem ser descartadas quando a sessão for encerrada.
+- Pode haver expiração por inatividade; o tempo ainda precisa ser configurado.
+
+Não manter histórico na aplicação não significa automaticamente que nenhum serviço externo ou log tenha retenção. Antes do uso público, será necessário revisar configurações de logs e políticas dos provedores usados.
+
+
+---
+
+13. Interface do assistente
+
+O assistente será acessado por um FAB — botão flutuante — presente em todas as telas do sistema.
+
+Ao clicar no FAB:
+
+1. Abre-se uma pequena janela de chat.
+2. O usuário digita a mensagem.
+3. A resposta é exibida na janela.
+4. Resultados de cartões podem ser clicáveis.
+5. Ao clicar em um cartão, o usuário é levado à interface real do sistema para interação manual.
+
+Neste primeiro momento, design não é prioridade. Para testes, basta uma interface básica e funcional.
+
+O usuário deve estar autenticado para utilizar o assistente.
+
+
+---
+
+14. Ambiente de desenvolvimento
+
+Inicialmente, o projeto será executado localmente.
+
+A escolha de hospedagem e publicação ficará para uma etapa posterior.
+
+A primeira fase deve permitir testar:
+
+- API de IA local.
+- Integração com a Groq.
+- Guardrails.
+- Autenticação.
+- Acesso autorizado aos dados de teste.
+- Limite configurável.
+- Ferramentas implementadas.
+- Interface básica de chat.
+- Navegação para a interface real do sistema.
+
+Não se deve presumir que a estrutura atual do banco, a configuração de acesso ou o ambiente de teste já foram identificados.
+
+
+---
+
+15. Confirmações para ações
+
+A proposta aprovada para a primeira versão é:
+
+Situação	Comportamento
+
+Criar um cartão pessoal com informações claras	Pode criar diretamente.
+Criar cartão em quadro compartilhado	Mostrar prévia e pedir confirmação.
+Criar vários cartões	Mostrar a lista e pedir confirmação.
+Destino ou informação necessária ambígua	Perguntar antes de agir.
+Usuário sem permissão	Não executar.
+Estado do quadro mudou após a prévia	Revalidar e pedir nova confirmação se necessário.
+
+
+A confirmação deve estar associada à ação apresentada. Ao fechar o chat ou recarregar a página, uma proposta ainda não confirmada é descartada.
+
+
+---
+
+16. Pontos ainda pendentes
+
+Apesar das definições acima, estes pontos precisam ser conhecidos ou detalhados antes da implementação completa:
+
+1. Repositório e esquema do backend PostgreSQL: indispensáveis para confirmar consultas, tabelas, permissões e gravações.
+2. Ambiente local de dados: definição de banco, credenciais seguras e dados de teste.
+3. Escopo exato das respostas de estudo: decidir se perguntas escolares gerais serão aceitas além de funções e dados do sistema.
+4. Detalhamento das demais tools: definir uma por uma depois de consultar_atividades.
+5. Navegação direta para cartões: verificar o que a interface atual já suporta.
+6. Tempo de expiração da sessão temporária.
+7. Contas autorizadas a zerar o limite em desenvolvimento.
+8. Lista inicial de termos bloqueados e mensagem fixa do guardrail.
+9. Nome, mensagem inicial e identidade visual do assistente: podem ser definidos depois; o primeiro frontend será básico.
+10. Hospedagem e lançamento público: ficam para uma etapa posterior.
+
+
+---
+
+17. Próximo passo
+
+O próximo passo é analisar o backend PostgreSQL e seu esquema para concluir a especificação técnica da primeira tool, consultar_atividades.
+
+Depois disso, seguir com a definição das próximas tools uma por uma, mantendo o escopo, os parâmetros, as permissões e os comportamentos bem definidos antes da implementação.
