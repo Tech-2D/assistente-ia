@@ -27,4 +27,4 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 Abra `http://127.0.0.1:8000`. Consulte `/health` para saber se o processo está no ar e `/ready` para verificar dependências configuradas. Uma resposta positiva de `/ready` não substitui um teste real de conversa e login.
 
-Para continuar o desenvolvimento, leia [status.md](status.md) e [AGENTS.md](AGENTS.md). O [memorial original](docs/memorial-original.txt) preserva o planejamento histórico; decisões posteriores estão registradas no status.
+Para continuar o desenvolvimento, leia [AGENTS.md](AGENTS.md), que reúne o contexto, o estado atual e as pendências. O [memorial original](docs/memorial-original.txt) preserva o planejamento histórico.
