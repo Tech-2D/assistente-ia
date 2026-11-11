@@ -28,7 +28,7 @@ O usuário prefere explicações simples em português e decisões autônomas de
 
 - Uma turma por consulta. Todas as turmas são visíveis e podem ser filtradas; se forem pedidas várias, perguntar qual. Usar a preferência pessoal como padrão quando disponível. Não confundir com o filtro temporário.
 - Datas inclusivas em `America/Sao_Paulo`; sem datas, hoje e seis dias seguintes; apenas data inicial, sete dias; apenas data final, perguntar a inicial. Sem data final/duração no esquema de atividade inspecionado. Limite de um ano; a mensagem escolhida é: “Eita, pera ai, A agenda não é uma máquina do tempo! Escolha um período de até um ano para eu procurar as atividades.”
-- O usuário escolheu a próxima segunda quando disser “segunda”. O código atual ainda pergunta se hoje for segunda: divergência pendente, não uma decisão nova a presumir.
+- O usuário escolheu a próxima segunda quando disser “segunda”, inclusive quando hoje é segunda. O prompt e os exemplos instruem o modelo a aplicar a regra; a interpretação com Groq real ainda precisa ser validada.
 - Matérias: identificar aproximações entre nomes existentes, avisar a escolha e perguntar em caso de ambiguidade. Apelidos aprovados estão no dicionário `ALIASES` em `app/subjects.py` e no prompt; `mobile` é Aplicativo Móvel, `DAD` é Aplicação Dinâmica, e “desenvolvimento do app” pede esclarecimento. Prefixos numerados não devem induzir matérias como Chefia quando a pessoa quis Português; veja a pendência abaixo.
 - Ocorrências são cards individuais, com resumo da recorrência quando sustentado pelo modelo cadastrado; não inventar ocorrências. O aviso escolhido para recorrências potencialmente incompletas é: “Estas são as atividades cadastradas até agora. Algumas atividades recorrentes desse período ainda podem não ter sido registradas!”
 - Em erro, dizer que não foi possível consultar e orientar tentativa manual na Agenda; não confundir falha com ausência de resultados. Os cards são simples e apontam para a atividade; não há necessidade de expor anexos ou descrição no chat.
@@ -50,7 +50,7 @@ Em 11/11/2026, passaram 38 testes locais com `pytest -q`, além de `ruff check a
 ## Pendências e limitações conhecidas
 
 1. No novo computador, configurar Groq, banco, CA e Firebase fora do Git; testar login real, `/ready` e conversas completas com modelo e ferramenta. `/ready` positivo não comprova essas integrações de ponta a ponta.
-2. Corrigir a divergência de “segunda” indicada nas regras acima e testar datas e matérias ambíguas com o modelo real.
+2. Testar a interpretação de “segunda”, outras datas e matérias ambíguas com o modelo Groq real.
 3. Validar a integração com a Agenda. O `localStorage` pertence à origem do navegador: a tela separada só lê a preferência da Agenda se estiver na mesma origem. Em origens diferentes, será necessário passar o contexto adequadamente. Validar também o link dos cards no site real.
 4. Revisar prefixos numéricos de matérias: o usuário disse para ignorar prefixos como “Matemática 10” ao interpretar o nome significativo, enquanto o resolvedor possui lógica específica para nomes numerados. Confirmar os casos com testes e preservar os apelidos aprovados.
 5. Planejar o botão flutuante e o chat no sistema. A tela atual é de testes. Conferir descarte ao fechar ou recarregar: o servidor mantém sessões até exclusão explícita ou expiração.

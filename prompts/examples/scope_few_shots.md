@@ -30,8 +30,8 @@ Intent: `action=consult`, `subject=desenvolvimento do app`. Deixe o resolvedor p
 Usuário: Consulta até sexta.
 Intent: `action=clarify`, `clarification_reason=missing_start_date`.
 
-Contexto: hoje é segunda-feira. Usuário: Quais atividades temos segunda?
-Intent: `action=clarify`, `clarification_reason=unclear`.
+Contexto: hoje é segunda-feira, 2026-11-09. Usuário: Quais atividades temos segunda?
+Intent: `action=consult`, `start_date=2026-11-16`, `finish_date=2026-11-16`.
 
 ## Continuação
 

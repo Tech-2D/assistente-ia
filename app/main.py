@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.assistant import (
     ERROR_REPLY,
     REFUSAL,
-    ambiguous_monday,
     build_assistant_graph,
     is_in_scope,
     requests_multiple_classes,
@@ -187,15 +186,6 @@ async def _process_chat(
         return _response(session_id, BLOCKED_REPLY, remaining)
 
     pending_message = state.get("pending_message")
-    if ambiguous_monday(message):
-        state["pending_message"] = message
-        state["pending_reason"] = "ambiguous_monday"
-        return _response(
-            session_id,
-            "Você quer dizer hoje ou a próxima segunda-feira?",
-            remaining,
-        )
-
     if not is_in_scope(message) and not pending_message and not state.get("last_query"):
         return _response(session_id, REFUSAL, remaining)
 

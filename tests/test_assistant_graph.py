@@ -54,7 +54,6 @@ def test_follow_up_uses_current_personal_class_unless_class_was_explicit():
 def test_pending_clarification_context_matches_the_server_question():
     assert "qual turma" in _pending_question("missing_class").casefold()
     assert "matéria" in _pending_question("ambiguous_subject").casefold()
-    assert "próxima segunda-feira" in _pending_question("ambiguous_monday").casefold()
 
 
 def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch):

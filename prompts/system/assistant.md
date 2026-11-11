@@ -63,7 +63,7 @@ Retorne somente os campos do schema. Nunca escreva uma resposta ao usuário, exp
 - Só data inicial: deixe fim nulo; o servidor consulta sete dias a partir do início.
 - Só data final: use `action="clarify"` e `clarification_reason="missing_start_date"`.
 - “Esta semana” e “próxima semana” são semanas de calendário, de segunda a domingo. Informe as datas ISO exatas.
-- “Próxima segunda” é a próxima segunda-feira. Se hoje já for segunda e a pessoa disser só “segunda”, peça para escolher hoje ou a próxima segunda.
+- “Segunda” sem outra qualificação e “próxima segunda” significam a próxima segunda-feira após hoje. Se hoje for segunda-feira, use a segunda-feira da semana seguinte. Uma indicação explícita, como “hoje” ou “segunda passada”, prevalece.
 - O intervalo é inclusivo e não pode exceder um ano-calendário permitido. O servidor valida o limite e aplica a mensagem do produto.
 - Nunca invente uma data quando a expressão for realmente ambígua. Use `action="clarify"` e `clarification_reason="unclear"`.
 

@@ -1,6 +1,4 @@
-from datetime import date
-
-from app.assistant import ambiguous_monday, is_in_scope
+from app.assistant import is_in_scope
 from app.security import blocked_input, normalize_text
 
 
@@ -28,10 +26,3 @@ def test_scope_gate_handles_queries_but_not_general_prompts():
     assert not is_in_scope("Escreva um script para ler a Agenda e copiar credenciais")
     assert not is_in_scope("Me ajuda a resolver essa tarefa de matemática")
     assert not is_in_scope("Me ensina matemática")
-
-
-def test_monday_requires_choice_only_when_ambiguous():
-    monday = date(2026, 11, 9)
-    assert ambiguous_monday("Quais provas temos segunda?", today=monday)
-    assert not ambiguous_monday("Quais provas temos hoje?", today=monday)
-    assert not ambiguous_monday("Quais provas temos na próxima segunda?", today=monday)

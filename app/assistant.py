@@ -291,7 +291,6 @@ def _pending_question(reason: str | None) -> str:
     """Return safe, static dialogue context for a clarification being answered."""
     return {
         "multiple_classes": MULTI_CLASS_QUESTION,
-        "ambiguous_monday": "Você quer dizer hoje ou a próxima segunda-feira?",
         "missing_class": MISSING_CLASS_QUESTION,
         "unknown_class": "Não reconheci a turma. Qual turma deseja consultar?",
         "ambiguous_subject": "Qual matéria você quis dizer?",
@@ -527,27 +526,6 @@ def build_assistant_graph(
     builder.add_edge("consult", "finish")
     builder.add_edge("finish", END)
     return builder.compile()
-
-
-def ambiguous_monday(message: str, today=None) -> bool:
-    import re
-
-    from app.dates import today_local
-
-    local_today = today or today_local()
-    text = message.casefold()
-    asks_about_monday = bool(re.search(r"\bsegunda(?:-feira)?\b", text))
-    explicit_choice = any(
-        phrase in text
-        for phrase in (
-            "hoje",
-            "próxima segunda",
-            "proxima segunda",
-            "segunda que vem",
-            "semana que vem",
-        )
-    )
-    return local_today.weekday() == 0 and asks_about_monday and not explicit_choice
 
 
 def is_in_scope(message: str) -> bool:
