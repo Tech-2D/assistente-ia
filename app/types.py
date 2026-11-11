@@ -15,3 +15,4 @@ class ActivityFilters(BaseModel):
     subject: str | None = Field(default=None, max_length=160)
     class_id: str | None = Field(default=None, max_length=160)
     include_general: bool = True
+    general_only: bool = False

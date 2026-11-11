@@ -61,6 +61,40 @@ def test_pending_clarification_context_matches_the_server_question():
     assert "matéria" in _pending_question("ambiguous_subject").casefold()
 
 
+def test_follow_up_can_leave_general_only_mode():
+    previous = {"general_only": True, "include_general": True}
+    intent = RequestIntent(action="consult", inherit_previous=True, include_general=False)
+    result = _merge_follow_up(intent, previous)
+    assert result["general_only"] is False
+    assert result["include_general"] is False
+
+
+@pytest.mark.asyncio
+async def test_general_only_intent_reaches_tool_and_formats_scope(monkeypatch):
+    async def fake_query(filters, default_class, allowed_classes):
+        assert filters.general_only is True
+        return {
+            "class_id": default_class,
+            "start_date": "2026-11-11",
+            "finish_date": "2026-11-17",
+            "types": ["evento"],
+            "general_only": True,
+            "items": [],
+        }
+
+    monkeypatch.setattr("app.assistant.query_activities", fake_query)
+    graph = build_assistant_graph(
+        default_class="2° TECH D",
+        classes=["2° TECH D"],
+        classifier=FakeClassifier(
+            RequestIntent(action="consult", general_only=True, types=["evento"])
+        ),
+    )
+    result = await graph.ainvoke({"message": "Mostre só eventos gerais"})
+    assert "eventos gerais" in result["answer"]
+    assert result["query_context"]["general_only"] is True
+
+
 @pytest.mark.asyncio
 async def test_clear_dates_removes_both_old_dates_before_calling_tool(monkeypatch):
     captured = []

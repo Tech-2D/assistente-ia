@@ -63,6 +63,9 @@ class RequestIntent(BaseModel):
     include_general: bool | None = Field(
         None, description="Include general activities; defaults to true"
     )
+    general_only: bool | None = Field(
+        None, description="Only general activities, excluding class-specific activities"
+    )
     inherit_previous: bool = Field(
         False, description="Use prior validated filters for a clear follow-up"
     )
@@ -78,6 +81,7 @@ class LookupArgs(BaseModel):
     subject: str | None = Field(default=None, max_length=160)
     class_id: str | None = Field(default=None, max_length=160)
     include_general: bool = True
+    general_only: bool = False
 
 
 class AssistantState(TypedDict, total=False):
@@ -133,6 +137,7 @@ def _system_prompt(today: str, previous_query: dict | None) -> str:
                 if value in {"tarefa", "licao", "trabalho", "prova", "evento"}
             ],
             "include_general": bool(previous_query.get("include_general", True)),
+            "general_only": bool(previous_query.get("general_only", False)),
             "class_explicit": bool(previous_query.get("class_explicit")),
             "pending_clarification": previous_query.get("pending_clarification")
             if previous_query.get("pending_clarification")
@@ -166,7 +171,7 @@ def _system_prompt(today: str, previous_query: dict | None) -> str:
 
 def _merge_follow_up(intent: RequestIntent, previous: dict | None) -> dict:
     """Merge follow-up filters only from a server-validated prior query."""
-    fields = {"start_date", "finish_date", "types", "subject", "include_general"}
+    fields = {"start_date", "finish_date", "types", "subject", "include_general", "general_only"}
     previous = previous if intent.inherit_previous and isinstance(previous, dict) else {}
     merged: dict = {}
     cleared = set(intent.clear_filters)
@@ -197,6 +202,12 @@ def _merge_follow_up(intent: RequestIntent, previous: dict | None) -> dict:
         class_explicit = False
     merged["class_explicit"] = class_explicit
     if merged.get("include_general") is None:
+        merged["include_general"] = True
+    if intent.include_general is False:
+        merged["general_only"] = False
+    if merged.get("general_only") is None:
+        merged["general_only"] = False
+    if merged["general_only"]:
         merged["include_general"] = True
     return merged
 
@@ -230,6 +241,9 @@ def _canonical_query_context(result: dict, query: dict, classes: list[str]) -> d
         "include_general": result.get("include_general")
         if isinstance(result.get("include_general"), bool)
         else bool(query.get("include_general", True)),
+        "general_only": result.get("general_only")
+        if isinstance(result.get("general_only"), bool)
+        else bool(query.get("general_only", False)),
         "class_explicit": bool(query.get("class_explicit")) and class_id is not None,
         "pending_clarification": result.get("clarification_code"),
     }
@@ -327,11 +341,12 @@ def _format_result(result: dict) -> tuple[str, list[dict]]:
     start = result.get("start_date", "")
     finish = result.get("finish_date", "")
     class_name = result.get("class_id") or "a turma selecionada"
+    scope = "nos eventos gerais" if result.get("general_only") else f"para {class_name}"
     subject = result.get("subject")
     if not items:
         answer = (
             f"Não encontrei atividades de {_display_date(start)} a {_display_date(finish)} "
-            f"para {class_name} com esses filtros."
+            f"{scope} com esses filtros."
         )
         if subject:
             answer += f"\nMatéria selecionada: {subject}."
@@ -342,7 +357,7 @@ def _format_result(result: dict) -> tuple[str, list[dict]]:
     count = len(items)
     answer = (
         f"Encontrei {count} atividade{'s' if count != 1 else ''} de "
-        f"{_display_date(start)} a {_display_date(finish)} para {class_name}."
+        f"{_display_date(start)} a {_display_date(finish)} {scope}."
     )
     if subject:
         answer += f"\nMatéria selecionada: {subject}."
@@ -404,6 +419,7 @@ def build_assistant_graph(
         subject: str | None = None,
         class_id: str | None = None,
         include_general: bool = True,
+        general_only: bool = False,
     ) -> str:
         """Consulta atividades cadastradas para uma turma e período, sem alterar o banco."""
         try:
@@ -414,6 +430,7 @@ def build_assistant_graph(
                 subject=subject,
                 class_id=class_id,
                 include_general=include_general,
+                general_only=general_only,
             )
             result = await query_activities(filters, default_class or "", classes)
             return json.dumps(result, ensure_ascii=False, default=str)

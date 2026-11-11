@@ -37,7 +37,7 @@ async def test_readonly_filtered_query_and_tool_match_live_records():
             if await conn.fetchval("SHOW transaction_isolation") != "repeatable read":
                 pytest.fail("A consulta não usa uma visão consistente.", pytrace=False)
             rows = await conn.fetch(
-                QUERY, class_id, True, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, []
+                QUERY, class_id, True, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, [], False
             )
             if len(rows) > ACTIVITY_LIMIT:
                 pytest.skip("Intervalo de integração ultrapassou o limite de atividades.")
@@ -51,18 +51,35 @@ async def test_readonly_filtered_query_and_tool_match_live_records():
             subject, kind = candidates[0][3], candidates[0][2]
             expected = [str(row[0]) for row in rows if row[3] == subject and row[2] == kind]
             filtered = await conn.fetch(
-                QUERY, class_id, True, start_iso, end_iso, ACTIVITY_LIMIT + 1, subject, [kind]
+                QUERY,
+                class_id,
+                True,
+                start_iso,
+                end_iso,
+                ACTIVITY_LIMIT + 1,
+                subject,
+                [kind],
+                False,
             )
             if [str(row[0]) for row in filtered] != expected:
                 pytest.fail("Filtro SQL não corresponde à comparação local.", pytrace=False)
             only_class = await conn.fetch(
-                QUERY, class_id, False, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, []
+                QUERY, class_id, False, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, [], False
             )
             if [str(row[0]) for row in only_class] != [
                 str(row[0]) for row in rows if row[6] == class_id
             ]:
                 pytest.fail(
                     "Filtro de eventos gerais não corresponde à comparação local.", pytrace=False
+                )
+            only_general = await conn.fetch(
+                QUERY, class_id, True, start_iso, end_iso, ACTIVITY_LIMIT + 1, None, [], True
+            )
+            if [str(row[0]) for row in only_general] != [
+                str(row[0]) for row in rows if row[6] is None
+            ]:
+                pytest.fail(
+                    "Filtro exclusivo de gerais não corresponde à comparação local.", pytrace=False
                 )
             recurrence_ids = sorted({str(row[7]) for row in rows if row[7] and row[6] == class_id})
             occurrence_rows = await conn.fetch(

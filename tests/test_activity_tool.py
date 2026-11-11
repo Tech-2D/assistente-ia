@@ -32,7 +32,8 @@ async def test_filtered_limit_and_recurrence_override(monkeypatch):
             if query.startswith("SELECT DISTINCT subject"):
                 return [{"subject": "Matemática"}]
             if query == activity_tool.QUERY:
-                _, _, _, _, limit, subject, types = args
+                _, _, _, _, limit, subject, types, general_only = args
+                assert general_only is False
                 assert "a.subject=$6" in query and "a.type=ANY($7::text[])" in query
                 return [
                     row
@@ -73,7 +74,7 @@ async def test_too_many_matching_results_stop_before_recurrence_query(monkeypatc
             if query.startswith("SELECT DISTINCT subject"):
                 return []
             assert query == activity_tool.QUERY
-            assert args[-2:] == (None, [])
+            assert args[-3:] == (None, [], False)
             return [object(), object(), object()]
 
     @asynccontextmanager
@@ -83,3 +84,26 @@ async def test_too_many_matching_results_stop_before_recurrence_query(monkeypatc
     monkeypatch.setattr(activity_tool, "read_connection", connection)
     result = await activity_tool.query_activities(ActivityFilters(), "Turma A", ["Turma A"])
     assert result == {"error": True, "error_code": "too_many_results"}
+
+
+@pytest.mark.asyncio
+async def test_only_general_query_excludes_class_and_skips_class_recurrences(monkeypatch):
+    class FakeConnection:
+        async def fetch(self, query, *args):
+            if query.startswith("SELECT DISTINCT subject"):
+                return []
+            assert query == activity_tool.QUERY
+            assert args[-1] is True
+            return [("1", "Aviso", "evento", None, "2026-11-11", None, None, None, None)]
+
+    @asynccontextmanager
+    async def connection():
+        yield FakeConnection()
+
+    monkeypatch.setattr(activity_tool, "read_connection", connection)
+    result = await activity_tool.query_activities(
+        ActivityFilters(start_date=date(2026, 11, 11), general_only=True), "Turma A", ["Turma A"]
+    )
+    assert result["general_only"] is True
+    assert [item["is_general"] for item in result["items"]] == [True]
+    assert result["missing_occurrences_detected"] is False

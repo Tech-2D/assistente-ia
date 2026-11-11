@@ -14,7 +14,7 @@ Usuário: Tem algo de matemática sexta?
 Intent: `action=consult`, `subject=Matemática`, data de sexta em ISO.
 
 Usuário: Mostre os eventos gerais, sem atividade da turma.
-Intent: `action=consult`, `types=[evento]`, `include_general=true`. Eventos gerais são incluídos por padrão.
+Intent: `action=consult`, `types=[evento]`, `general_only=true`. Não inclua eventos de uma turma específica.
 
 Usuário: Só as atividades da turma, sem eventos gerais.
 Intent: `action=consult`, `include_general=false`.

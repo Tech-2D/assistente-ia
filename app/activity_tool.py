@@ -16,7 +16,8 @@ QUERY = """SELECT a.id,a.title,a.type,a.subject,a.date,a.time,a.turma_id,a.recur
 FROM tech2d.activities a
 LEFT JOIN tech2d.app_documents d
  ON d.collection='recurringActivities' AND d.id=a.recurring_id
-WHERE (a.turma_id=$1 OR ($2 AND a.turma_id IS NULL))
+WHERE (($8::boolean AND a.turma_id IS NULL)
+ OR (NOT $8::boolean AND (a.turma_id=$1 OR ($2 AND a.turma_id IS NULL))))
  AND a.date >= $3 AND a.date <= $4
  AND ($6::text IS NULL OR a.subject=$6)
  AND (cardinality($7::text[])=0 OR a.type=ANY($7::text[]))
@@ -109,16 +110,21 @@ async def query_activities(
             ACTIVITY_LIMIT + 1,
             chosen_subject,
             list(filters.types),
+            filters.general_only,
         )
         if len(rows) > ACTIVITY_LIMIT:
             return {"error": True, "error_code": "too_many_results"}
 
-        recurrence_templates = await conn.fetch(
-            "SELECT id,data FROM tech2d.app_documents "
-            "WHERE collection='recurringActivities' "
-            "AND data->>'turmaId'=$1 AND data->>'active'='true' "
-            "AND coalesce(data->>'deleted','false')!='true'",
-            class_id,
+        recurrence_templates = (
+            []
+            if filters.general_only
+            else await conn.fetch(
+                "SELECT id,data FROM tech2d.app_documents "
+                "WHERE collection='recurringActivities' "
+                "AND data->>'turmaId'=$1 AND data->>'active'='true' "
+                "AND coalesce(data->>'deleted','false')!='true'",
+                class_id,
+            )
         )
         relevant_templates = [
             template
@@ -232,7 +238,8 @@ async def query_activities(
         "types": list(filters.types),
         "subject": chosen_subject,
         "include_general": filters.include_general,
+        "general_only": filters.general_only,
         "items": items,
-        "future_recurrence_warning": finish > now + timedelta(days=56),
+        "future_recurrence_warning": not filters.general_only and finish > now + timedelta(days=56),
         "missing_occurrences_detected": missing_occurrences > 0 or unreadable_recurrence_models,
     }
