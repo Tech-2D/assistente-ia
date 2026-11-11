@@ -171,7 +171,7 @@ def _merge_follow_up(intent: RequestIntent, previous: dict | None) -> dict:
     merged: dict = {}
     cleared = set(intent.clear_filters)
     for field in fields:
-        if field in cleared:
+        if field in cleared or (field in {"start_date", "finish_date"} and "dates" in cleared):
             merged[field] = [] if field == "types" else None
             continue
         current = getattr(intent, field)

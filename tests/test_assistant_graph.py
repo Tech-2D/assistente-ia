@@ -62,6 +62,45 @@ def test_pending_clarification_context_matches_the_server_question():
 
 
 @pytest.mark.asyncio
+async def test_clear_dates_removes_both_old_dates_before_calling_tool(monkeypatch):
+    captured = []
+
+    async def fake_query(filters, default_class, allowed_classes):
+        captured.append(filters)
+        return {
+            "class_id": default_class,
+            "start_date": "2026-11-11",
+            "finish_date": "2026-11-17",
+            "types": list(filters.types),
+            "subject": None,
+            "include_general": True,
+            "items": [],
+        }
+
+    monkeypatch.setattr("app.assistant.query_activities", fake_query)
+    classifier = FakeClassifier(
+        RequestIntent(action="consult", inherit_previous=True, clear_filters=["dates"])
+    )
+    graph = build_assistant_graph(
+        default_class="2° TECH D", classes=["2° TECH D"], classifier=classifier
+    )
+    await graph.ainvoke(
+        {
+            "message": "Limpe o período",
+            "previous_query": {
+                "start_date": "2026-12-01",
+                "finish_date": "2026-12-15",
+                "types": ["prova"],
+            },
+        }
+    )
+    assert len(captured) == 1
+    assert captured[0].start_date is None
+    assert captured[0].finish_date is None
+    assert captured[0].types == ["prova"]
+
+
+@pytest.mark.asyncio
 async def test_groq_model_uses_the_requested_model_and_generation_settings(monkeypatch):
     from types import SimpleNamespace
 

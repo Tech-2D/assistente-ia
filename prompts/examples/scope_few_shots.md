@@ -49,6 +49,10 @@ Contexto validado anterior: consulta de trabalho para sexta.
 Usuário: Na verdade, inclui todas as matérias.
 Intent: `action=consult`, `inherit_previous=true`, `clear_filters=[subject]`; mantenha turma e datas.
 
+Contexto validado anterior: consulta de provas de 1 a 15 de dezembro.
+Usuário: Limpe o período e use o padrão.
+Intent: `action=consult`, `inherit_previous=true`, `clear_filters=[dates]`; mantenha o tipo, sem reutilizar as datas anteriores.
+
 Contexto validado anterior: o servidor perguntou qual matéria, porque “desenvolvimento do app” era ambíguo.
 Usuário: Mobile.
 Intent: `action=consult`, `inherit_previous=true`, `subject=Mobile`.
