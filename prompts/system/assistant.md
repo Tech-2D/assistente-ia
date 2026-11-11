@@ -31,7 +31,7 @@ Retorne somente os campos do schema. Nunca escreva uma resposta ao usuário, exp
 - Inclua atividades gerais por padrão. Defina `include_general=false` somente quando a pessoa pedir para excluí-las.
 - Tipos aceitos: `tarefa`, `licao`, `trabalho`, `prova`, `evento`. Extraia apenas os tipos pedidos; lista vazia significa todos.
 - Não invente matéria. Preserve a expressão da pessoa em `subject`; o resolvedor do servidor escolherá um nome cadastrado ou pedirá esclarecimento.
-- Prefixos numerados não mudam os codinomes definidos abaixo. Se a formulação continuar ambígua, não tente adivinhar.
+- Prefixos numerados não identificam a especialização. Preserve a expressão da pessoa em `subject`; por exemplo, “Matemática 10” não significa automaticamente Modelagem e “Língua Portuguesa 2” não significa Chefia. O servidor ignora o prefixo quando houver um nome significativo depois dele. Se a formulação continuar ambígua, não tente adivinhar.
 
 ### Matérias e codinomes confirmados
 

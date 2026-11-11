@@ -51,8 +51,6 @@ def resolve_subject(query: str | None, subjects: list[str]) -> tuple[str | None,
     if not query:
         return None, []
     q = norm(query)
-    if q == "lideranca":
-        return None, []
     if q in {"desenvolvimento do app", "desenvolvimento do aplicativo"}:
         return None, [
             s
@@ -66,21 +64,18 @@ def resolve_subject(query: str | None, subjects: list[str]) -> tuple[str | None,
     exact = [s for s in subjects if norm(s) == q]
     if exact:
         return exact[0], []
-    # A Portuguese-course number is only a catalogue prefix: never infer Chefia from it.
-    if re.fullmatch(r"lingua portuguesa\s+\d+", q):
-        q = "lingua portuguesa"
-    numeric = re.fullmatch(r"(matematica|estatistica)\s+(\d+)", q)
-    if numeric:
-        prefix, number = numeric.groups()
-        numbered = []
-        for subject in subjects:
-            match = re.match(rf"^{prefix}\s+(\d+)(?:\s|$)", norm(subject))
-            if match and match.group(1).startswith(number):
-                numbered.append(subject)
-        if len(numbered) == 1:
-            return numbered[0], []
-        if len(numbered) > 1:
-            return None, numbered
+    # Numbers in catalogue prefixes do not identify the subject after the prefix.
+    numbered = re.fullmatch(
+        r"(matematica|lingua portuguesa|estatistica|biologia)\s+\d+(?:\s+(.*))?", q
+    )
+    prefix_only = bool(numbered and not numbered.group(2))
+    if numbered:
+        q = numbered.group(2) or numbered.group(1)
+    if q == "lideranca":
+        return None, []
+    exact = [s for s in subjects if norm(s) == q]
+    if exact:
+        return exact[0], []
     hits = []
     for subject in subjects:
         n = norm(subject)
@@ -91,6 +86,9 @@ def resolve_subject(query: str | None, subjects: list[str]) -> tuple[str | None,
         return hits[0], []
     if len(hits) > 1:
         return None, hits
+    if prefix_only:
+        # If the plain subject is absent, don't guess a numbered specialization.
+        return None, []
     # Ignore numeric course prefixes but only when user's phrase identifies the suffix clearly.
     suffix_hits = [
         s for s in subjects if norm(s).split(" ", 1)[-1] == q or norm(s).endswith(" " + q)
