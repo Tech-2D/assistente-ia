@@ -191,6 +191,28 @@ async def test_clarification_reply_receives_the_matching_question_as_context():
 
 
 @pytest.mark.asyncio
+async def test_multiple_clarifications_preserve_intermediate_answers():
+    classifier = FakeClassifier(RequestIntent(action="refuse", clarification_reason="off_topic"))
+    graph = build_assistant_graph(default_class=None, classes=[], classifier=classifier)
+    await graph.ainvoke(
+        {
+            "message": "2° TECH D",
+            "pending_turns": [
+                ("Tem prova de desenvolvimento do app?", "ambiguous_subject"),
+                ("Mobile", "missing_class"),
+            ],
+        }
+    )
+    assert [message.content for message in classifier.messages[1:]] == [
+        "Tem prova de desenvolvimento do app?",
+        "Qual matéria você quis dizer?",
+        "Mobile",
+        "Qual turma devo consultar?",
+        "2° TECH D",
+    ]
+
+
+@pytest.mark.asyncio
 async def test_classifier_receives_server_calculated_monday_and_week():
     import json
 

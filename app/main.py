@@ -157,6 +157,7 @@ async def _get_or_create_session(session_id: str, uid: str, preferred_class: str
                 "last_query": None,
                 "pending_message": None,
                 "pending_reason": None,
+                "pending_turns": [],
                 "lock": asyncio.Lock(),
             }
             sessions[session_id] = state
@@ -183,6 +184,7 @@ async def _process_chat(
         state["last_query"] = None
         state["pending_message"] = None
         state["pending_reason"] = None
+        state["pending_turns"] = []
         return _response(session_id, BLOCKED_REPLY, remaining)
 
     pending_message = state.get("pending_message")
@@ -192,7 +194,12 @@ async def _process_chat(
     try:
         available_classes = await list_classes()
         if requests_multiple_classes(message, available_classes):
-            state["pending_message"] = message
+            turns = state.get("pending_turns") or []
+            if not turns and pending_message:
+                turns = [(pending_message, state.get("pending_reason"))]
+            turns = [*turns, (message, "multiple_classes")]
+            state["pending_turns"] = turns[:1] + turns[-4:] if len(turns) > 5 else turns
+            state["pending_message"] = pending_message or message
             state["pending_reason"] = "multiple_classes"
             return _response(
                 session_id,
@@ -223,6 +230,7 @@ async def _process_chat(
                 "previous_query": state.get("last_query"),
                 "pending_message": pending_message,
                 "pending_reason": state.get("pending_reason"),
+                "pending_turns": state.get("pending_turns") or [],
             }
         )
         state["updated"] = time.time()
@@ -245,14 +253,20 @@ async def _process_chat(
             state["last_query"] = None
             state["pending_message"] = None
             state["pending_reason"] = None
+            state["pending_turns"] = []
         elif clarification_reason and clarification_reason not in {"none", "off_topic"}:
-            # Keep the original request so the next reply can fill the missing
-            # filter instead of starting a context-free conversation.
+            # Retain the first request and recent clarification answers, bounded.
+            turns = state.get("pending_turns") or []
+            if not turns and pending_message:
+                turns = [(pending_message, state.get("pending_reason"))]
+            turns = [*turns, (message, clarification_reason)]
+            state["pending_turns"] = turns[:1] + turns[-4:] if len(turns) > 5 else turns
             state["pending_message"] = pending_message or message
             state["pending_reason"] = clarification_reason
         else:
             state["pending_message"] = None
             state["pending_reason"] = None
+            state["pending_turns"] = []
         if isinstance(result.get("query_context"), dict):
             state["last_query"] = result["query_context"]
         return _response(

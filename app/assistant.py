@@ -86,6 +86,7 @@ class AssistantState(TypedDict, total=False):
     previous_query: dict | None
     pending_message: str | None
     pending_reason: str | None
+    pending_turns: list[tuple[str, str]]
     intent: RequestIntent
     query_context: dict
     result: dict
@@ -426,8 +427,17 @@ def build_assistant_graph(
         today = state.get("today") or today_local().isoformat()
         system = _system_prompt(today, state.get("previous_query", previous_query))
         messages = [SystemMessage(content=system)]
+        turns = state.get("pending_turns") or []
         resumed_message = state.get("pending_message", pending_message)
-        if resumed_message:
+        if turns:
+            for user_message, reason in turns:
+                messages.extend(
+                    [
+                        HumanMessage(content=user_message),
+                        AIMessage(content=_pending_question(reason)),
+                    ]
+                )
+        elif resumed_message:
             question = _pending_question(state.get("pending_reason", pending_reason))
             messages.extend(
                 [

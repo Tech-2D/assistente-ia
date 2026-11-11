@@ -303,6 +303,73 @@ def test_assistant_preserves_request_while_waiting_for_subject_answer(client, mo
     assert state["pending_reason"] is None
 
 
+def test_successive_clarifications_keep_answers_until_finished(client, monkeypatch):
+    monkeypatch.setattr(main.settings, "groq_api_key", "configured-for-test")
+
+    async def classes():
+        return ["2° TECH D"]
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    inputs = []
+
+    class FakeGraph:
+        async def ainvoke(self, state):
+            inputs.append(state)
+            if len(inputs) <= 2:
+                reason = ["ambiguous_subject", "missing_class"][len(inputs) - 1]
+                return {
+                    "intent": RequestIntent(action="clarify", clarification_reason=reason),
+                    "answer": "Preciso de mais detalhes.",
+                }
+            return {"intent": RequestIntent(action="consult"), "answer": "Consulta concluída."}
+
+    monkeypatch.setattr(main, "build_assistant_graph", lambda **kwargs: FakeGraph())
+    headers = {"Authorization": "Bearer test-token"}
+    response = client.post(
+        "/api/chat", headers=headers, json={"message": "Tem prova de desenvolvimento do app?"}
+    )
+    session_id = response.json()["session_id"]
+    for message in ("Mobile", "2° TECH D"):
+        response = client.post(
+            "/api/chat", headers=headers, json={"message": message, "session_id": session_id}
+        )
+        assert response.status_code == 200
+    assert inputs[2]["pending_turns"] == [
+        ("Tem prova de desenvolvimento do app?", "ambiguous_subject"),
+        ("Mobile", "missing_class"),
+    ]
+    assert main.sessions[session_id]["pending_turns"] == []
+
+
+def test_clarification_history_is_bounded(client, monkeypatch):
+    monkeypatch.setattr(main.settings, "groq_api_key", "configured-for-test")
+
+    async def classes():
+        return ["2° TECH D"]
+
+    class FakeGraph:
+        async def ainvoke(self, state):
+            return {
+                "intent": RequestIntent(action="clarify", clarification_reason="unclear"),
+                "answer": "Qual período?",
+            }
+
+    monkeypatch.setattr(main, "list_classes", classes)
+    monkeypatch.setattr(main, "build_assistant_graph", lambda **kwargs: FakeGraph())
+    headers = {"Authorization": "Bearer test-token"}
+    response = client.post("/api/chat", headers=headers, json={"message": "Quais provas?"})
+    session_id = response.json()["session_id"]
+    for number in range(7):
+        response = client.post(
+            "/api/chat",
+            headers=headers,
+            json={"message": str(number), "session_id": session_id},
+        )
+        assert response.status_code == 200
+    turns = main.sessions[session_id]["pending_turns"]
+    assert [turn[0] for turn in turns] == ["Quais provas?", "3", "4", "5", "6"]
+
+
 def test_tool_failure_preserves_prior_query_and_pending_clarification(client, monkeypatch):
     import asyncio
 
