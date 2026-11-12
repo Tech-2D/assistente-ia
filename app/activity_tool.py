@@ -13,8 +13,8 @@ from app.types import ActivityFilters
 ACTIVITY_LIMIT = 10_000
 ACTIVITY_URL = "https://tech-2d.github.io/Agenda/#atividade="
 QUERY = """SELECT a.id,a.title,a.type,a.subject,a.date,a.time,a.turma_id,a.recurring_id,d.data
-FROM tech2d.activities a
-LEFT JOIN tech2d.app_documents d
+FROM tech2d.visao_atividades a
+LEFT JOIN tech2d.visao_documentos_aplicacao d
  ON d.collection='recurringActivities' AND d.id=a.recurring_id
 WHERE (($8::boolean AND a.turma_id IS NULL)
  OR (NOT $8::boolean AND (a.turma_id=$1 OR ($2 AND a.turma_id IS NULL))))
@@ -25,7 +25,7 @@ ORDER BY a.date,a.time NULLS LAST,a.id
 LIMIT $5"""
 
 OCCURRENCE_QUERY = """SELECT DISTINCT a.recurring_id::text AS recurring_id,a.date
-FROM tech2d.activities a
+FROM tech2d.visao_atividades a
 WHERE a.turma_id=$1 AND a.date >= $2 AND a.date <= $3
  AND a.recurring_id::text=ANY($4::text[])"""
 
@@ -82,7 +82,7 @@ async def query_activities(
 
     async with read_connection() as conn:
         subject_rows = await conn.fetch(
-            "SELECT DISTINCT subject FROM tech2d.activities "
+            "SELECT DISTINCT subject FROM tech2d.visao_atividades "
             "WHERE subject IS NOT NULL ORDER BY subject"
         )
         known_subjects = sorted(
@@ -119,7 +119,7 @@ async def query_activities(
             []
             if filters.general_only
             else await conn.fetch(
-                "SELECT id,data FROM tech2d.app_documents "
+                "SELECT id,data FROM tech2d.visao_documentos_aplicacao "
                 "WHERE collection='recurringActivities' "
                 "AND data->>'turmaId'=$1 AND data->>'active'='true' "
                 "AND coalesce(data->>'deleted','false')!='true'",
